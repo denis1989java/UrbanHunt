@@ -27,7 +27,7 @@ public class ChallengeController {
     private final ChallengeService challengeService;
 
     @PostMapping
-    public ResponseEntity<Challenge> createChallenge(@Valid @RequestBody CreateChallengeRequest request) {
+    public ResponseEntity<ChallengeDto> createChallenge(@Valid @RequestBody CreateChallengeRequest request) {
         UserPrincipal principal = SecurityUtils.getCurrentUser();
         if (principal == null) {
             return ResponseEntity.status(401).build();
@@ -45,7 +45,27 @@ public class ChallengeController {
                 .build();
 
         Challenge created = challengeService.createChallenge(challenge);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+
+        // Convert to DTO with nextHintDate
+        ChallengeDto dto = ChallengeDto.builder()
+                .id(created.getId())
+                .title(created.getTitle())
+                .status(created.getStatus())
+                .country(created.getCountry())
+                .cityName(created.getCityName())
+                .createdBy(created.getCreatedBy())
+                .creator(created.getCreatedBy() != null
+                    ? challengeService.getCreatorInfo(created.getCreatedBy())
+                    : null)
+                .prizePhotoUrl(created.getPrizePhotoUrl())
+                .createdAt(created.getCreatedAt())
+                .hints(challengeService.getPublishedHints(created))
+                .completion(created.getCompletion())
+                .commentsCount(created.getCommentsCount())
+                .nextHintDate(challengeService.getNextHintDate(created))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
     @GetMapping("/{id}")
@@ -70,6 +90,7 @@ public class ChallengeController {
                 .hints(challengeService.getPublishedHints(challenge))
                 .completion(challenge.getCompletion())
                 .commentsCount(challenge.getCommentsCount())
+                .nextHintDate(challengeService.getNextHintDate(challenge))
                 .build();
         return ResponseEntity.ok(dto);
     }
@@ -77,17 +98,31 @@ public class ChallengeController {
     @GetMapping
     public List<ChallengeDto> getAllChallenges(
             @RequestParam(required = false) String city,
-            @RequestParam(required = false) ChallengeStatus status) {
+            @RequestParam(required = false) ChallengeStatus status,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String lastCreatedAt) {
+
+        Date lastDate = null;
+        if (lastCreatedAt != null && !lastCreatedAt.isEmpty()) {
+            try {
+                // Parse ISO date format
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                lastDate = sdf.parse(lastCreatedAt);
+            } catch (Exception e) {
+                // If parsing fails, ignore and start from beginning
+            }
+        }
 
         List<Challenge> challenges;
         if (city != null && status != null) {
-            challenges = challengeService.getActiveChallengesByCity(city);
+            challenges = challengeService.getChallengesByCityAndStatus(city, status, limit, lastDate);
         } else if (city != null) {
-            challenges = challengeService.getChallengesByCity(city);
+            challenges = challengeService.getChallengesByCity(city, limit, lastDate);
         } else if (status != null) {
-            challenges = challengeService.getActiveChallenges();
+            challenges = challengeService.getChallengesByStatus(status, limit, lastDate);
         } else {
-            challenges = challengeService.getAllChallenges();
+            challenges = challengeService.getAllChallenges(limit, lastDate);
         }
 
         return challenges.stream()
@@ -103,7 +138,8 @@ public class ChallengeController {
                             .createdAt(challenge.getCreatedAt())
                             .hints(challengeService.getPublishedHints(challenge))
                             .completion(challenge.getCompletion())
-                            .commentsCount(challenge.getCommentsCount());
+                            .commentsCount(challenge.getCommentsCount())
+                            .nextHintDate(challengeService.getNextHintDate(challenge));
 
                     // Add creator info if available
                     if (challenge.getCreatedBy() != null) {

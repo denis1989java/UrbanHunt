@@ -34,10 +34,6 @@ public class CommentService {
         return saved;
     }
 
-    public Comment getCommentById(String id) {
-        return commentRepository.findById(id);
-    }
-
     public List<Comment> getCommentsByChallengeId(String challengeId, int limit, String startAfter) {
         return commentRepository.findByChallengeId(challengeId, limit, startAfter);
     }

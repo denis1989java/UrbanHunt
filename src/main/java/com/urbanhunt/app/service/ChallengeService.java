@@ -10,7 +10,7 @@ import com.urbanhunt.app.repository.ChallengeRepository;
 import com.urbanhunt.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -42,20 +42,20 @@ public class ChallengeService {
         return challengeRepository.findById(id);
     }
 
-    public List<Challenge> getAllChallenges() {
-        return challengeRepository.findAll();
+    public List<Challenge> getAllChallenges(int limit, Date lastCreatedAt) {
+        return challengeRepository.findAll(limit, lastCreatedAt);
     }
 
-    public List<Challenge> getActiveChallenges() {
-        return challengeRepository.findByStatus(ChallengeStatus.ACTIVE);
+    public List<Challenge> getChallengesByStatus(ChallengeStatus status, int limit, Date lastCreatedAt) {
+        return challengeRepository.findByStatus(status, limit, lastCreatedAt);
     }
 
-    public List<Challenge> getChallengesByCity(String cityName) {
-        return challengeRepository.findByCityName(cityName);
+    public List<Challenge> getChallengesByCity(String cityName, int limit, Date lastCreatedAt) {
+        return challengeRepository.findByCityName(cityName, limit, lastCreatedAt);
     }
 
-    public List<Challenge> getActiveChallengesByCity(String cityName) {
-        return challengeRepository.findByCityNameAndStatus(cityName, ChallengeStatus.ACTIVE);
+    public List<Challenge> getChallengesByCityAndStatus(String cityName, ChallengeStatus status, int limit, Date lastCreatedAt) {
+        return challengeRepository.findByCityNameAndStatus(cityName, status, limit, lastCreatedAt);
     }
 
     public Challenge addHint(String challengeId, Hint hint) {
@@ -73,6 +73,9 @@ public class ChallengeService {
         Challenge challenge = challengeRepository.findById(challengeId);
         if (challenge == null) {
             return null;
+        }
+        if (challenge.getHints() == null) {
+            challenge.setHints(new ArrayList<>());
         }
         challenge.getHints().add(hint);
         return challengeRepository.save(challenge);
@@ -108,7 +111,7 @@ public class ChallengeService {
         Challenge challenge = challengeRepository.findById(challengeId);
         if (challenge != null) {
             challenge.setCommentsCount(
-                    (challenge.getCommentsCount() != null ? challenge.getCommentsCount() : 0L) + 1
+                (challenge.getCommentsCount() != null ? challenge.getCommentsCount() : 0L) + 1
             );
             challengeRepository.save(challenge);
         }
@@ -135,15 +138,16 @@ public class ChallengeService {
         }
 
         return UserSummary.builder()
-                .email(creator.getEmail())
-                .name(creator.getName())
-                .pictureUrl(creator.getPictureUrl())
-                .socialMediaUrl(creator.getSocialMediaUrl())
-                .build();
+            .email(creator.getEmail())
+            .name(creator.getName())
+            .pictureUrl(creator.getPictureUrl())
+            .socialMediaUrl(creator.getSocialMediaUrl())
+            .build();
     }
 
     /**
      * Get only published hints (where publishedAt <= now)
+     *
      * @param challenge The challenge
      * @return List of published hints
      */
@@ -154,8 +158,27 @@ public class ChallengeService {
 
         Date now = new Date();
         return challenge.getHints().stream()
-                .filter(hint -> hint.getPublishedAt() != null && !hint.getPublishedAt().after(now))
-                .toList();
+            .filter(hint -> hint.getPublishedAt() != null && !hint.getPublishedAt().after(now))
+            .toList();
+    }
+
+    /**
+     * Get the next unpublished hint date (where publishedAt > now)
+     *
+     * @param challenge The challenge
+     * @return Date of next hint or null if none
+     */
+    public Date getNextHintDate(Challenge challenge) {
+        if (challenge.getHints() == null || challenge.getHints().isEmpty()) {
+            return null;
+        }
+
+        Date now = new Date();
+        return challenge.getHints().stream()
+            .filter(hint -> hint.getPublishedAt() != null && hint.getPublishedAt().after(now))
+            .map(Hint::getPublishedAt)
+            .min(Date::compareTo)
+            .orElse(null);
     }
 
 }

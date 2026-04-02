@@ -1,11 +1,12 @@
 package com.urbanhunt.app.repository;
 
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.Query;
 import com.urbanhunt.app.model.Challenge;
 import com.urbanhunt.app.model.Challenge.ChallengeStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
-
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -40,58 +41,77 @@ public class ChallengeRepository {
         }
     }
 
-    public List<Challenge> findAll() {
+    public List<Challenge> findAll(int limit, Date lastCreatedAt) {
         try {
-            var docs = firestore.collection(COLLECTION_NAME).get().get().getDocuments();
+            Query query = firestore.collection(COLLECTION_NAME)
+                .orderBy("createdAt", Query.Direction.DESCENDING);
+
+            if (lastCreatedAt != null) {
+                query = query.startAfter(lastCreatedAt);
+            }
+
+            var docs = query.limit(limit).get().get().getDocuments();
             return docs.stream()
-                    .map(doc -> doc.toObject(Challenge.class))
-                    .collect(Collectors.toList());
+                .map(doc -> doc.toObject(Challenge.class))
+                .collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Failed to find all challenges", e);
         }
     }
 
-    public List<Challenge> findByStatus(ChallengeStatus status) {
+    public List<Challenge> findByStatus(ChallengeStatus status, int limit, Date lastCreatedAt) {
         try {
-            var docs = firestore.collection(COLLECTION_NAME)
-                    .whereEqualTo("status", status.name())
-                    .get()
-                    .get()
-                    .getDocuments();
+            Query query = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("status", status.name())
+                .orderBy("createdAt", Query.Direction.DESCENDING);
+
+            if (lastCreatedAt != null) {
+                query = query.startAfter(lastCreatedAt);
+            }
+
+            var docs = query.limit(limit).get().get().getDocuments();
             return docs.stream()
-                    .map(doc -> doc.toObject(Challenge.class))
-                    .collect(Collectors.toList());
+                .map(doc -> doc.toObject(Challenge.class))
+                .collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Failed to find challenges by status", e);
         }
     }
 
-    public List<Challenge> findByCityName(String cityName) {
+    public List<Challenge> findByCityName(String cityName, int limit, Date lastCreatedAt) {
         try {
-            var docs = firestore.collection(COLLECTION_NAME)
-                    .whereEqualTo("cityName", cityName)
-                    .get()
-                    .get()
-                    .getDocuments();
+            Query query = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("cityName", cityName)
+                .orderBy("createdAt", Query.Direction.DESCENDING);
+
+            if (lastCreatedAt != null) {
+                query = query.startAfter(lastCreatedAt);
+            }
+
+            var docs = query.limit(limit).get().get().getDocuments();
             return docs.stream()
-                    .map(doc -> doc.toObject(Challenge.class))
-                    .collect(Collectors.toList());
+                .map(doc -> doc.toObject(Challenge.class))
+                .collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Failed to find challenges by city", e);
         }
     }
 
-    public List<Challenge> findByCityNameAndStatus(String cityName, ChallengeStatus status) {
+    public List<Challenge> findByCityNameAndStatus(String cityName, ChallengeStatus status, int limit, Date lastCreatedAt) {
         try {
-            var docs = firestore.collection(COLLECTION_NAME)
-                    .whereEqualTo("cityName", cityName)
-                    .whereEqualTo("status", status.name())
-                    .get()
-                    .get()
-                    .getDocuments();
+            Query query = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("cityName", cityName)
+                .whereEqualTo("status", status.name())
+                .orderBy("createdAt", Query.Direction.DESCENDING);
+
+            if (lastCreatedAt != null) {
+                query = query.startAfter(lastCreatedAt);
+            }
+
+            var docs = query.limit(limit).get().get().getDocuments();
             return docs.stream()
-                    .map(doc -> doc.toObject(Challenge.class))
-                    .collect(Collectors.toList());
+                .map(doc -> doc.toObject(Challenge.class))
+                .collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Failed to find challenges by city and status", e);
         }

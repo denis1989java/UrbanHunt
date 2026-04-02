@@ -31,5 +31,7 @@ public class ChallengeDto {
     private List<Hint> hints;
     private Completion completion;
     private Long commentsCount;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private Date nextHintDate;
 
 }
