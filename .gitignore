@@ -37,3 +37,6 @@ build/
 
 ### Application ###
 application-local.yml
+*-key.json
+*.json.key
+service-account-*.json
