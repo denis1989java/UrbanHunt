@@ -59,8 +59,14 @@ public class ChallengeService {
     }
 
     public Challenge addHint(String challengeId, Hint hint) {
+        // Validate that hint has either content or link
+        if ((hint.getContent() == null || hint.getContent().trim().isEmpty()) &&
+            (hint.getLink() == null || hint.getLink().trim().isEmpty())) {
+            throw new IllegalArgumentException("Hint must have either text content or a photo/video");
+        }
+
         // Validate hint text for profanity
-        if (hint.getContent() != null) {
+        if (hint.getContent() != null && !hint.getContent().trim().isEmpty()) {
             profanityFilterService.validateText(hint.getContent(), "hint text");
         }
 
