@@ -1,0 +1,9 @@
+app:
+  security:
+    disabled: false
+
+logging:
+  level:
+    com.urbanhunt: INFO
+    org.springframework.web: WARN
+    com.google.cloud: WARN

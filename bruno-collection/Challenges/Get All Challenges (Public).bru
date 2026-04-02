@@ -1,0 +1,32 @@
+meta {
+  name: Get All Challenges (Public)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/challenges
+  body: none
+  auth: none
+}
+
+params:query {
+  ~city: Berlin
+  ~status: ACTIVE
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return array", function() {
+    expect(Array.isArray(res.body)).to.be.true;
+  });
+
+  test("should not contain hints", function() {
+    if (res.body.length > 0) {
+      expect(res.body[0].hints).to.be.an('array').that.is.empty;
+    }
+  });
+}

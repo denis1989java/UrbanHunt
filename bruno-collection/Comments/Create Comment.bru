@@ -1,0 +1,39 @@
+meta {
+  name: Create Comment
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/challenges/{{challengeId}}/comments
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "content": "Отличный челлендж! Нашел конверт за 20 минут 🎉"
+  }
+}
+
+vars:pre-request {
+  challengeId: m4KE9sXWr10Fa2RcMsFY
+}
+
+tests {
+  test("should return 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  
+  test("should have authorId auto-filled", function() {
+    expect(res.body.authorId).to.be.a('string');
+  });
+  
+  test("should have authorName auto-filled", function() {
+    expect(res.body.authorName).to.be.a('string');
+  });
+  
+  script:post-response {
+    bru.setVar("commentId", res.body.id);
+  }
+}

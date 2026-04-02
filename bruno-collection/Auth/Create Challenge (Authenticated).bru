@@ -1,0 +1,35 @@
+meta {
+  name: Create Challenge (Authenticated)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/challenges
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{firebaseToken}}
+}
+
+body:json {
+  {
+    "title": "Authenticated Challenge",
+    "status": "ACTIVE",
+    "cityName": "Berlin",
+    "hints": [
+      {
+        "content": "Secret hint",
+        "publishedAt": "2026-03-31T10:00:00"
+      }
+    ]
+  }
+}
+
+tests {
+  test("should return 201", function() {
+    expect(res.status).to.equal(201);
+  });
+}

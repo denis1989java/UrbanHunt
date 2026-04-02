@@ -1,0 +1,43 @@
+meta {
+  name: Create Challenge
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/challenges
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Секретный конверт у Бранденбургских ворот",
+    "status": "ACTIVE",
+    "cityName": "Berlin",
+    "hints": [
+      {
+        "content": "Ищите рядом с туристическим центром",
+        "publishedAt": "2026-03-31T10:00:00"
+      },
+      {
+        "content": "Подсказка откроется завтра",
+        "publishedAt": "2026-04-01T10:00:00"
+      }
+    ]
+  }
+}
+
+tests {
+  test("should return 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("should return challenge with id", function() {
+    expect(res.body.id).to.be.a('string');
+  });
+
+  script:post-response {
+    bru.setVar("challengeId", res.body.id);
+  }
+}

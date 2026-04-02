@@ -1,0 +1,33 @@
+meta {
+  name: Complete Challenge
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/challenges/{{challengeId}}/complete
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "userId": "user-123",
+    "userName": "John Doe",
+    "qrCodeScanned": "QR-CODE-12345"
+  }
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should have completion", function() {
+    expect(res.body.completion).to.exist;
+  });
+
+  test("status should be COMPLETED", function() {
+    expect(res.body.status).to.equal("COMPLETED");
+  });
+}

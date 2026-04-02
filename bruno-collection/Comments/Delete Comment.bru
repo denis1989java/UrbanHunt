@@ -1,0 +1,22 @@
+meta {
+  name: Delete Comment
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/api/challenges/{{challengeId}}/comments/{{commentId}}
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  commentId: wG6pR8yGqhybbAY7oCWa
+  challengeId: m4KE9sXWr10Fa2RcMsFY
+}
+
+tests {
+  test("should return 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

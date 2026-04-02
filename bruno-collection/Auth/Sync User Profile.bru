@@ -1,0 +1,26 @@
+meta {
+  name: Sync User Profile
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/auth/sync
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{firebaseToken}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  
+  test("should create/update user", function() {
+    expect(res.body.id).to.be.a('string');
+    expect(res.body.lastLoginAt).to.exist;
+  });
+}

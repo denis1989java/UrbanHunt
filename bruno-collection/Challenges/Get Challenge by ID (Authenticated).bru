@@ -1,0 +1,25 @@
+meta {
+  name: Get Challenge by ID (with hints)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/challenges/{{challengeId}}
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  challengeId: m4KE9sXWr10Fa2RcMsFY
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  
+  test("should contain hints", function() {
+    expect(res.body.hints).to.be.an('array');
+  });
+}

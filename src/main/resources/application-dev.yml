@@ -1,0 +1,15 @@
+spring:
+  cloud:
+    gcp:
+      firestore:
+        database-id: urbanhunt
+
+app:
+  security:
+    disabled: false
+
+logging:
+  level:
+    com.urbanhunt: DEBUG
+    org.springframework.web: DEBUG
+    com.google.cloud: DEBUG

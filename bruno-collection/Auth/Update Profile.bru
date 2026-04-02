@@ -1,0 +1,33 @@
+meta {
+  name: Update Profile
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/api/auth/profile
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{firebaseToken}}
+}
+
+body:json {
+  {
+    "name": "John Doe Updated",
+    "pictureUrl": "https://storage.googleapis.com/urbanhunt-491913.appspot.com/users/profile.jpg",
+    "socialMediaUrl": "https://instagram.com/johndoe"
+  }
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return updated user", function() {
+    expect(res.body.name).to.equal("John Doe Updated");
+  });
+}

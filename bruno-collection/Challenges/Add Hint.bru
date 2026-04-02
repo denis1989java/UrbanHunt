@@ -1,0 +1,29 @@
+meta {
+  name: Add Hint
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/challenges/{{challengeId}}/hints
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "content": "Третья подсказка - смотрите наверх!",
+    "revealTime": "2026-04-02T10:00:00",
+    "isRevealed": false
+  }
+}
+
+vars:pre-request {
+  challengeId: m4KE9sXWr10Fa2RcMsFY
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

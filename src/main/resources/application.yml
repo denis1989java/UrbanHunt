@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: urban-hunt
+  cloud:
+    gcp:
+      project-id: urbanhunt-491913
+      firestore:
+        database-id: urbanhunt
+
+server:
+  port: ${PORT:8080}
+
+app:
+  security:
+    disabled: true
+
+logging:
+  level:
+    com.urbanhunt: INFO
+    org.springframework.web: INFO
+    com.google.cloud: INFO

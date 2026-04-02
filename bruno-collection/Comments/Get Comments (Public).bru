@@ -1,0 +1,30 @@
+meta {
+  name: Get Comments (Public)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/challenges/{{challengeId}}/comments
+  body: none
+  auth: none
+}
+
+params:query {
+  limit: 20
+  ~startAfter: comment-id-here
+}
+
+vars:pre-request {
+  challengeId: m4KE9sXWr10Fa2RcMsFY
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  
+  test("should return array", function() {
+    expect(Array.isArray(res.body)).to.be.true;
+  });
+}
