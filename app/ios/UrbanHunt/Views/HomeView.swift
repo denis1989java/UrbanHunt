@@ -17,6 +17,11 @@ struct HomeView: View {
         LocalizedView {
             content
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshChallenges"))) { _ in
+            Task {
+                await viewModel.refreshChallenges()
+            }
+        }
     }
 
     private func statusText(_ status: Challenge.ChallengeStatus) -> String {

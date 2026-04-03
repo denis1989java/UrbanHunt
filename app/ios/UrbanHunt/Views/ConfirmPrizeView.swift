@@ -16,11 +16,8 @@ struct ConfirmPrizeView: View {
     @State private var message: String = ""
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
-    @State private var isUploading = false
-    @State private var uploadedContentUrl: String?
     @State private var isSubmitting = false
     @State private var errorMessage: String?
-    @State private var showSuccess = false
 
     init(confirmationId: String) {
         self.confirmationId = confirmationId
@@ -88,13 +85,6 @@ struct ConfirmPrizeView: View {
             .task {
                 print("📍 ConfirmPrizeView: .task called")
                 await loadConfirmation()
-            }
-            .alert("success".localized, isPresented: $showSuccess) {
-                Button("ok".localized) {
-                    dismiss()
-                }
-            } message: {
-                Text("prize_confirmed_successfully".localized)
             }
         }
     }
@@ -173,16 +163,9 @@ struct ConfirmPrizeView: View {
                                     .foregroundColor(.gray)
                             }
                             Spacer()
-                            if isUploading {
-                                ProgressView()
-                            } else if uploadedContentUrl != nil {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                            } else {
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.gray)
                         }
                         .frame(height: 80)
                         .padding()
@@ -197,7 +180,6 @@ struct ConfirmPrizeView: View {
                         Task {
                             if let data = try? await newItem?.loadTransferable(type: Data.self) {
                                 selectedImageData = data
-                                await uploadContent(data)
                             }
                         }
                     }
@@ -232,43 +214,55 @@ struct ConfirmPrizeView: View {
                     }
                     .foregroundColor(.white)
                     .padding()
-                    .background(
-                        (isSubmitting || isUploading) ? Color.blue.opacity(0.5) : Color.blue
-                    )
+                    .background(isSubmitting ? Color.blue.opacity(0.5) : Color.blue)
                     .cornerRadius(8)
                 }
-                .disabled(isSubmitting || isUploading)
+                .disabled(isSubmitting)
             }
             .padding()
         }
     }
 
-    private func uploadContent(_ data: Data) async {
-        isUploading = true
-        errorMessage = nil
-
-        do {
-            let url = try await StorageService.shared.uploadPrizeConfirmationContent(data)
-            uploadedContentUrl = url
-        } catch {
-            errorMessage = "upload_failed".localized + ": \(error.localizedDescription)"
-        }
-
-        isUploading = false
-    }
-
     private func submitConfirmation() async {
+        print("📤 ConfirmPrizeView: Submitting confirmation")
         isSubmitting = true
         errorMessage = nil
 
+        // Upload content first if selected
+        var contentUrl: String? = nil
+        if let imageData = selectedImageData {
+            print("📤 Uploading selected media...")
+            do {
+                contentUrl = try await StorageService.shared.uploadPrizeConfirmationContent(imageData)
+                print("✅ Media uploaded successfully: \(contentUrl ?? "nil")")
+            } catch {
+                print("❌ Upload failed: \(error)")
+                errorMessage = "upload_failed".localized + ": \(error.localizedDescription)"
+                isSubmitting = false
+                return
+            }
+        }
+
+        // Submit confirmation
         do {
             _ = try await APIService.shared.confirmPrizeById(
                 confirmationId: confirmationId,
                 message: message.isEmpty ? nil : message,
-                contentUrl: uploadedContentUrl
+                contentUrl: contentUrl
             )
-            showSuccess = true
+            print("✅ Prize confirmation submitted successfully")
+
+            // Post notification to refresh challenges
+            await MainActor.run {
+                NotificationCenter.default.post(name: NSNotification.Name("RefreshChallenges"), object: nil)
+            }
+
+            // Close the view
+            await MainActor.run {
+                dismiss()
+            }
         } catch {
+            print("❌ Submit failed: \(error)")
             errorMessage = "submit_failed".localized + ": \(error.localizedDescription)"
         }
 
