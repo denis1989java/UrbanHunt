@@ -38,7 +38,35 @@ public class PrizeConfirmationService {
     }
 
     /**
-     * Confirm prize finding by user
+     * Confirm prize finding by user using confirmationId
+     */
+    public PrizeConfirmation confirmPrizeById(String confirmationId, String userId, String message, String contentUrl) {
+        PrizeConfirmation confirmation = prizeConfirmationRepository.findById(confirmationId);
+        if (confirmation == null) {
+            throw new RuntimeException("Prize confirmation not found: " + confirmationId);
+        }
+
+        if (confirmation.getStatus() == ConfirmationStatus.DONE) {
+            throw new RuntimeException("Prize already confirmed");
+        }
+
+        // Update confirmation
+        confirmation.setUserId(userId);
+        confirmation.setStatus(ConfirmationStatus.DONE);
+        confirmation.setMessage(message);
+        confirmation.setContentUrl(contentUrl);
+        confirmation.setConfirmedAt(new Date());
+
+        PrizeConfirmation saved = prizeConfirmationRepository.save(confirmation);
+
+        // Update challenge status to COMPLETED
+        challengeService.updateChallengeStatus(confirmation.getChallengeId(), ChallengeStatus.COMPLETED);
+
+        return saved;
+    }
+
+    /**
+     * Confirm prize finding by user using challengeId (legacy method)
      */
     public PrizeConfirmation confirmPrize(String challengeId, String userId, String message, String contentUrl) {
         PrizeConfirmation confirmation = prizeConfirmationRepository.findByChallengeId(challengeId);
@@ -63,6 +91,10 @@ public class PrizeConfirmationService {
         challengeService.updateChallengeStatus(challengeId, ChallengeStatus.COMPLETED);
 
         return saved;
+    }
+
+    public PrizeConfirmation getConfirmationById(String confirmationId) {
+        return prizeConfirmationRepository.findById(confirmationId);
     }
 
     public PrizeConfirmation getConfirmationByChallengeId(String challengeId) {

@@ -131,3 +131,6 @@
 "upload_failed" = "Subida fallida";
 "submit_failed" = "Envío fallido";
 "success" = "Éxito";
+"prize_already_confirmed" = "Este premio ya ha sido confirmado";
+"confirmation_not_found" = "Confirmación no encontrada";
+"failed_to_load" = "Error al cargar";

@@ -131,3 +131,6 @@
 "upload_failed" = "Upload failed";
 "submit_failed" = "Submission failed";
 "success" = "Success";
+"prize_already_confirmed" = "This prize has already been confirmed";
+"confirmation_not_found" = "Confirmation not found";
+"failed_to_load" = "Failed to load";

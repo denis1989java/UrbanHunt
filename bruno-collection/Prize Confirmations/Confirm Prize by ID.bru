@@ -1,17 +1,17 @@
 meta {
-  name: Confirm Prize by Challenge (Legacy)
+  name: Confirm Prize by ID
   type: http
-  seq: 4
+  seq: 3
 }
 
 post {
-  url: {{base_url}}/api/prize-confirmations/challenge/:challengeId/confirm
+  url: {{base_url}}/api/prize-confirmations/:confirmationId/confirm
   body: json
   auth: bearer
 }
 
 params:path {
-  challengeId:
+  confirmationId:
 }
 
 auth:bearer {

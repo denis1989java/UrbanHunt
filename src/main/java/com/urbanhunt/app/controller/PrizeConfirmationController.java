@@ -19,6 +19,15 @@ public class PrizeConfirmationController {
 
     private final PrizeConfirmationService prizeConfirmationService;
 
+    @GetMapping("/{confirmationId}")
+    public ResponseEntity<PrizeConfirmation> getConfirmationById(@PathVariable String confirmationId) {
+        PrizeConfirmation confirmation = prizeConfirmationService.getConfirmationById(confirmationId);
+        if (confirmation == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(confirmation);
+    }
+
     @GetMapping("/challenge/{challengeId}")
     public ResponseEntity<PrizeConfirmation> getConfirmationByChallengeId(@PathVariable String challengeId) {
         PrizeConfirmation confirmation = prizeConfirmationService.getConfirmationByChallengeId(challengeId);
@@ -26,6 +35,28 @@ public class PrizeConfirmationController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(confirmation);
+    }
+
+    @PostMapping("/{confirmationId}/confirm")
+    public ResponseEntity<PrizeConfirmation> confirmPrizeById(
+            @PathVariable String confirmationId,
+            @Valid @RequestBody ConfirmPrizeRequest request) {
+        UserPrincipal principal = SecurityUtils.getCurrentUser();
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            PrizeConfirmation confirmation = prizeConfirmationService.confirmPrizeById(
+                    confirmationId,
+                    principal.getUid(),
+                    request.getMessage(),
+                    request.getContentUrl()
+            );
+            return ResponseEntity.ok(confirmation);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PostMapping("/challenge/{challengeId}/confirm")

@@ -21,6 +21,7 @@ struct UrbanHuntApp: App {
     @State private var deepLinkChallengeId: String?
     @State private var showDeepLinkedChallenge = false
     @State private var showConfirmPrize = false
+    @State private var confirmationId: String?
 
     var body: some Scene {
         WindowGroup {
@@ -43,8 +44,8 @@ struct UrbanHuntApp: App {
                         }
                     }
                     .sheet(isPresented: $showConfirmPrize) {
-                        if let challengeId = deepLinkChallengeId {
-                            ConfirmPrizeView(challengeId: challengeId)
+                        if let confirmationId = confirmationId {
+                            ConfirmPrizeView(confirmationId: confirmationId)
                         }
                     }
                     .onChange(of: showDeepLinkedChallenge) { newValue in
@@ -86,16 +87,14 @@ struct UrbanHuntApp: App {
                 print("❌ Could not extract challengeId from pathComponents")
             }
         }
-        // Handle urbanhunt://challenge/{id}/confirm - confirm prize
-        else if url.scheme == "urbanhunt", url.host == "challenge", url.pathComponents.contains("confirm") {
-            // Extract challengeId from path like /challenge/{id}/confirm
-            if url.pathComponents.count >= 3 {
-                let challengeId = url.pathComponents[2] // Index: 0="", 1="challenge", 2="{id}"
-                print("🔗 Opening confirm prize for challenge: \(challengeId)")
-                deepLinkChallengeId = challengeId
+        // Handle urbanhunt://confirm/{confirmationId} - confirm prize
+        else if url.scheme == "urbanhunt", url.host == "confirm" {
+            if let confirmationId = url.pathComponents.last {
+                print("🔗 Opening confirm prize with confirmationId: \(confirmationId)")
+                self.confirmationId = confirmationId
                 showConfirmPrize = true
             } else {
-                print("❌ Could not extract challengeId from confirm path")
+                print("❌ Could not extract confirmationId from path")
             }
         }
         else {
