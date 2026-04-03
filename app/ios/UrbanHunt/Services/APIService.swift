@@ -672,7 +672,7 @@ class APIService {
             throw APIError.noToken
         }
 
-        guard let url = URL(string: "\(Config.apiBaseURL)/api/prize-confirmations/\(confirmationId)") else {
+        guard let url = URL(string: "\(Config.apiBaseURL)/prize-confirmations/\(confirmationId)") else {
             throw APIError.invalidResponse
         }
 
@@ -701,7 +701,7 @@ class APIService {
             throw APIError.noToken
         }
 
-        guard let url = URL(string: "\(Config.apiBaseURL)/api/prize-confirmations/challenge/\(challengeId)") else {
+        guard let url = URL(string: "\(Config.apiBaseURL)/prize-confirmations/challenge/\(challengeId)") else {
             throw APIError.invalidResponse
         }
 
@@ -730,7 +730,7 @@ class APIService {
             throw APIError.noToken
         }
 
-        guard let url = URL(string: "\(Config.apiBaseURL)/api/prize-confirmations/\(confirmationId)/confirm") else {
+        guard let url = URL(string: "\(Config.apiBaseURL)/prize-confirmations/\(confirmationId)/confirm") else {
             throw APIError.invalidResponse
         }
 
