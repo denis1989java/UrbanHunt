@@ -118,74 +118,102 @@ struct ConfirmPrizeView: View {
     }
 
     private var confirmationForm: some View {
-        Form {
-            Section(header: Text("prize_found".localized)) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
                 // Message input
-                TextEditor(text: $message)
-                    .frame(minHeight: 100)
-                    .overlay(
-                        Group {
-                            if message.isEmpty {
-                                Text("optional_message".localized)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("optional_message".localized)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+
+                    TextEditor(text: $message)
+                        .frame(minHeight: 100)
+                        .padding(8)
+                        .background(Color(uiColor: .systemBackground))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                        .overlay(
+                            Group {
+                                if message.isEmpty {
+                                    Text("optional_message".localized)
+                                        .foregroundColor(.gray.opacity(0.5))
+                                        .padding(.top, 16)
+                                        .padding(.leading, 12)
+                                }
+                            },
+                            alignment: .topLeading
+                        )
+                }
+
+                // Photo/Video picker
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("add_photo_or_video".localized)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+
+                    PhotosPicker(selection: $selectedItem, matching: .any(of: [.images, .videos])) {
+                        HStack {
+                            if let imageData = selectedImageData,
+                               let uiImage = UIImage(data: imageData) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 60, height: 60)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                Text("tap_to_change".localized)
+                                    .foregroundColor(.primary)
+                            } else {
+                                Image(systemName: "photo")
                                     .foregroundColor(.gray)
-                                    .padding(.top, 8)
-                                    .padding(.leading, 5)
+                                    .frame(width: 60, height: 60)
+                                Text("select_media".localized)
+                                    .foregroundColor(.gray)
                             }
-                        },
-                        alignment: .topLeading
-                    )
-            }
-
-            Section(header: Text("add_photo_or_video".localized)) {
-                PhotosPicker(selection: $selectedItem, matching: .any(of: [.images, .videos])) {
-                    HStack {
-                        Image(systemName: "photo")
-                            .foregroundColor(.blue)
-                        Text("select_media".localized)
-                            .foregroundColor(.primary)
-                        Spacer()
-                        if isUploading {
-                            ProgressView()
+                            Spacer()
+                            if isUploading {
+                                ProgressView()
+                            } else if uploadedContentUrl != nil {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            } else {
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .frame(height: 80)
+                        .padding()
+                        .background(Color(uiColor: .systemBackground))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+                    .onChange(of: selectedItem) { _, newItem in
+                        Task {
+                            if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                                selectedImageData = data
+                                await uploadContent(data)
+                            }
                         }
                     }
                 }
-                .onChange(of: selectedItem) { _, newItem in
-                    Task {
-                        if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                            selectedImageData = data
-                            await uploadContent(data)
-                        }
-                    }
-                }
 
-                // Preview selected image
-                if let imageData = selectedImageData,
-                   let uiImage = UIImage(data: imageData) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 200)
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.red.opacity(0.1))
                         .cornerRadius(8)
                 }
 
-                if let url = uploadedContentUrl {
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                        Text("media_uploaded".localized)
-                            .foregroundColor(.green)
-                    }
-                }
-            }
-
-            if let errorMessage = errorMessage {
-                Section {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                }
-            }
-
-            Section {
+                // Submit button
                 Button(action: {
                     Task {
                         await submitConfirmation()
@@ -195,15 +223,23 @@ struct ConfirmPrizeView: View {
                         Spacer()
                         if isSubmitting {
                             ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         } else {
                             Text("confirm_prize_found".localized)
                                 .fontWeight(.semibold)
                         }
                         Spacer()
                     }
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(
+                        (isSubmitting || isUploading) ? Color.blue.opacity(0.5) : Color.blue
+                    )
+                    .cornerRadius(8)
                 }
                 .disabled(isSubmitting || isUploading)
             }
+            .padding()
         }
     }
 
