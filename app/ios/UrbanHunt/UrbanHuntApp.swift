@@ -46,7 +46,19 @@ struct UrbanHuntApp: App {
                     .sheet(isPresented: $showConfirmPrize) {
                         if let confirmationId = confirmationId {
                             ConfirmPrizeView(confirmationId: confirmationId)
+                                .onAppear {
+                                    print("🎯 Sheet: Opening ConfirmPrizeView with confirmationId: \(confirmationId)")
+                                }
+                        } else {
+                            Text("Error: No confirmation ID")
+                                .onAppear {
+                                    print("❌ Sheet: confirmationId is nil!")
+                                }
                         }
+                    }
+                    .onChange(of: showConfirmPrize) { newValue in
+                        print("🔔 showConfirmPrize changed to: \(newValue)")
+                        print("🔔 confirmationId is: \(confirmationId ?? "nil")")
                     }
                     .onChange(of: showDeepLinkedChallenge) { newValue in
                         print("🔔 showDeepLinkedChallenge changed to: \(newValue)")
@@ -92,7 +104,11 @@ struct UrbanHuntApp: App {
             if let confirmationId = url.pathComponents.last {
                 print("🔗 Opening confirm prize with confirmationId: \(confirmationId)")
                 self.confirmationId = confirmationId
+
+                print("🔗 Setting showConfirmPrize to: true")
                 showConfirmPrize = true
+                print("🔗 showConfirmPrize is now: \(showConfirmPrize)")
+                print("🔗 confirmationId is now: \(self.confirmationId ?? "nil")")
             } else {
                 print("❌ Could not extract confirmationId from path")
             }

@@ -22,12 +22,34 @@ struct ConfirmPrizeView: View {
     @State private var errorMessage: String?
     @State private var showSuccess = false
 
+    init(confirmationId: String) {
+        self.confirmationId = confirmationId
+        print("🎯 ConfirmPrizeView: INIT called with confirmationId: \(confirmationId)")
+    }
+
     var body: some View {
         NavigationView {
             Group {
                 if isLoadingConfirmation {
-                    ProgressView()
-                        .scaleEffect(1.5)
+                    VStack {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Loading...")
+                            .padding(.top, 8)
+                    }
+                    .onAppear {
+                        print("🎨 ConfirmPrizeView body: showing loading state")
+                    }
+                } else if let error = errorMessage {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 60))
+                            .foregroundColor(.red)
+                        Text(error)
+                            .font(.headline)
+                            .multilineTextAlignment(.center)
+                            .padding()
+                    }
                 } else if let confirmation = confirmation {
                     if confirmation.status == .done {
                         // Already confirmed
@@ -64,6 +86,7 @@ struct ConfirmPrizeView: View {
                 }
             }
             .task {
+                print("📍 ConfirmPrizeView: .task called")
                 await loadConfirmation()
             }
             .alert("success".localized, isPresented: $showSuccess) {
@@ -77,16 +100,21 @@ struct ConfirmPrizeView: View {
     }
 
     private func loadConfirmation() async {
+        print("🔄 ConfirmPrizeView: Loading confirmation with ID: \(confirmationId)")
         isLoadingConfirmation = true
         errorMessage = nil
 
         do {
             confirmation = try await APIService.shared.getPrizeConfirmationById(confirmationId)
+            print("✅ ConfirmPrizeView: Successfully loaded confirmation: \(confirmation?.id ?? "nil")")
+            print("✅ ConfirmPrizeView: Status: \(confirmation?.status.rawValue ?? "nil")")
         } catch {
+            print("❌ ConfirmPrizeView: Failed to load confirmation: \(error)")
             errorMessage = "failed_to_load".localized + ": \(error.localizedDescription)"
         }
 
         isLoadingConfirmation = false
+        print("🔄 ConfirmPrizeView: Loading completed. isLoadingConfirmation=\(isLoadingConfirmation), confirmation=\(confirmation != nil), errorMessage=\(errorMessage ?? "nil")")
     }
 
     private var confirmationForm: some View {
