@@ -30,7 +30,7 @@ public class ChallengeService {
             challenge.setCreatedAt(new Date());
         }
         if (challenge.getStatus() == null) {
-            challenge.setStatus(ChallengeStatus.ACTIVE);
+            challenge.setStatus(ChallengeStatus.DRAFT);
         }
         if (challenge.getCommentsCount() == null) {
             challenge.setCommentsCount(0L);
@@ -46,6 +46,10 @@ public class ChallengeService {
         return challengeRepository.findAll(limit, lastCreatedAt);
     }
 
+    public List<Challenge> getActiveAndCompletedChallenges(int limit, Date lastCreatedAt) {
+        return challengeRepository.findActiveAndCompleted(limit, lastCreatedAt);
+    }
+
     public List<Challenge> getChallengesByStatus(ChallengeStatus status, int limit, Date lastCreatedAt) {
         return challengeRepository.findByStatus(status, limit, lastCreatedAt);
     }
@@ -54,8 +58,16 @@ public class ChallengeService {
         return challengeRepository.findByCityName(cityName, limit, lastCreatedAt);
     }
 
+    public List<Challenge> getChallengesByCityActiveAndCompleted(String cityName, int limit, Date lastCreatedAt) {
+        return challengeRepository.findByCityNameActiveAndCompleted(cityName, limit, lastCreatedAt);
+    }
+
     public List<Challenge> getChallengesByCityAndStatus(String cityName, ChallengeStatus status, int limit, Date lastCreatedAt) {
         return challengeRepository.findByCityNameAndStatus(cityName, status, limit, lastCreatedAt);
+    }
+
+    public List<Challenge> getChallengesByCreator(String userId, int limit, Date lastCreatedAt) {
+        return challengeRepository.findByCreatedBy(userId, limit, lastCreatedAt);
     }
 
     public Challenge addHint(String challengeId, Hint hint) {
@@ -100,6 +112,23 @@ public class ChallengeService {
             return null;
         }
         challenge.setStatus(status);
+        return challengeRepository.save(challenge);
+    }
+
+    public Challenge updateChallenge(String challengeId, String title, String country, String cityName, String prizePhotoUrl) {
+        // Validate challenge title for profanity
+        profanityFilterService.validateText(title, "challenge title");
+
+        Challenge challenge = challengeRepository.findById(challengeId);
+        if (challenge == null) {
+            return null;
+        }
+
+        challenge.setTitle(title);
+        challenge.setCountry(country);
+        challenge.setCityName(cityName);
+        challenge.setPrizePhotoUrl(prizePhotoUrl);
+
         return challengeRepository.save(challenge);
     }
 

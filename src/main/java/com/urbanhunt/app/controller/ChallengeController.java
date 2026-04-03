@@ -2,6 +2,7 @@ package com.urbanhunt.app.controller;
 
 import com.urbanhunt.app.dto.ChallengeDto;
 import com.urbanhunt.app.dto.CreateChallengeRequest;
+import com.urbanhunt.app.dto.UpdateChallengeRequest;
 import com.urbanhunt.app.model.Challenge;
 import com.urbanhunt.app.model.Challenge.ChallengeStatus;
 import com.urbanhunt.app.model.Completion;
@@ -35,7 +36,6 @@ public class ChallengeController {
 
         Challenge challenge = Challenge.builder()
                 .title(request.getTitle())
-                .status(ChallengeStatus.ACTIVE)
                 .country(request.getCountry())
                 .cityName(request.getCityName())
                 .createdBy(principal.getUid()) // Set creator userId instead of email
@@ -118,11 +118,11 @@ public class ChallengeController {
         if (city != null && status != null) {
             challenges = challengeService.getChallengesByCityAndStatus(city, status, limit, lastDate);
         } else if (city != null) {
-            challenges = challengeService.getChallengesByCity(city, limit, lastDate);
+            challenges = challengeService.getChallengesByCityActiveAndCompleted(city, limit, lastDate);
         } else if (status != null) {
             challenges = challengeService.getChallengesByStatus(status, limit, lastDate);
         } else {
-            challenges = challengeService.getAllChallenges(limit, lastDate);
+            challenges = challengeService.getActiveAndCompletedChallenges(limit, lastDate);
         }
 
         return challenges.stream()
@@ -184,10 +184,100 @@ public class ChallengeController {
         return ResponseEntity.ok(challenge);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ChallengeDto> updateChallenge(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateChallengeRequest request) {
+        UserPrincipal principal = SecurityUtils.getCurrentUser();
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        Challenge challenge = challengeService.updateChallenge(
+                id,
+                request.getTitle(),
+                request.getCountry(),
+                request.getCityName(),
+                request.getPrizePhotoUrl()
+        );
+
+        if (challenge == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Convert to DTO
+        ChallengeDto dto = ChallengeDto.builder()
+                .id(challenge.getId())
+                .title(challenge.getTitle())
+                .status(challenge.getStatus())
+                .country(challenge.getCountry())
+                .cityName(challenge.getCityName())
+                .createdBy(challenge.getCreatedBy())
+                .creator(challenge.getCreatedBy() != null
+                    ? challengeService.getCreatorInfo(challenge.getCreatedBy())
+                    : null)
+                .prizePhotoUrl(challenge.getPrizePhotoUrl())
+                .createdAt(challenge.getCreatedAt())
+                .hints(challengeService.getPublishedHints(challenge))
+                .completion(challenge.getCompletion())
+                .commentsCount(challenge.getCommentsCount())
+                .nextHintDate(challengeService.getNextHintDate(challenge))
+                .build();
+
+        return ResponseEntity.ok(dto);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteChallenge(@PathVariable String id) {
         challengeService.deleteChallenge(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/my")
+    public List<ChallengeDto> getMyChallenges(
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String lastCreatedAt) {
+        UserPrincipal principal = SecurityUtils.getCurrentUser();
+        if (principal == null) {
+            return List.of();
+        }
+
+        Date lastDate = null;
+        if (lastCreatedAt != null && !lastCreatedAt.isEmpty()) {
+            try {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                lastDate = sdf.parse(lastCreatedAt);
+            } catch (Exception e) {
+                // If parsing fails, ignore and start from beginning
+            }
+        }
+
+        List<Challenge> challenges = challengeService.getChallengesByCreator(principal.getUid(), limit, lastDate);
+
+        return challenges.stream()
+                .map(challenge -> {
+                    var builder = ChallengeDto.builder()
+                            .id(challenge.getId())
+                            .title(challenge.getTitle())
+                            .status(challenge.getStatus())
+                            .country(challenge.getCountry())
+                            .cityName(challenge.getCityName())
+                            .createdBy(challenge.getCreatedBy())
+                            .prizePhotoUrl(challenge.getPrizePhotoUrl())
+                            .createdAt(challenge.getCreatedAt())
+                            .hints(challengeService.getPublishedHints(challenge))
+                            .completion(challenge.getCompletion())
+                            .commentsCount(challenge.getCommentsCount())
+                            .nextHintDate(challengeService.getNextHintDate(challenge));
+
+                    if (challenge.getCreatedBy() != null) {
+                        builder.creator(challengeService.getCreatorInfo(challenge.getCreatedBy()));
+                    }
+
+                    return builder.build();
+                })
+                .collect(Collectors.toList());
     }
 
 }

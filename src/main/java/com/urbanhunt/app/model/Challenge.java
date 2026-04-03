@@ -43,6 +43,7 @@ public class Challenge {
     private Long commentsCount;
 
     public enum ChallengeStatus {
+        DRAFT,
         ACTIVE,
         COMPLETED,
         ARCHIVED

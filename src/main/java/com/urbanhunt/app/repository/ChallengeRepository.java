@@ -117,6 +117,64 @@ public class ChallengeRepository {
         }
     }
 
+    public List<Challenge> findActiveAndCompleted(int limit, Date lastCreatedAt) {
+        try {
+            Query query = firestore.collection(COLLECTION_NAME)
+                .whereIn("status", java.util.Arrays.asList(ChallengeStatus.ACTIVE.name(), ChallengeStatus.COMPLETED.name()))
+                .orderBy("createdAt", Query.Direction.DESCENDING);
+
+            if (lastCreatedAt != null) {
+                query = query.startAfter(lastCreatedAt);
+            }
+
+            var docs = query.limit(limit).get().get().getDocuments();
+            return docs.stream()
+                .map(doc -> doc.toObject(Challenge.class))
+                .collect(Collectors.toList());
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Failed to find active and completed challenges", e);
+        }
+    }
+
+    public List<Challenge> findByCityNameActiveAndCompleted(String cityName, int limit, Date lastCreatedAt) {
+        try {
+            Query query = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("cityName", cityName)
+                .whereIn("status", java.util.Arrays.asList(ChallengeStatus.ACTIVE.name(), ChallengeStatus.COMPLETED.name()))
+                .orderBy("createdAt", Query.Direction.DESCENDING);
+
+            if (lastCreatedAt != null) {
+                query = query.startAfter(lastCreatedAt);
+            }
+
+            var docs = query.limit(limit).get().get().getDocuments();
+            return docs.stream()
+                .map(doc -> doc.toObject(Challenge.class))
+                .collect(Collectors.toList());
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Failed to find challenges by city (active and completed)", e);
+        }
+    }
+
+    public List<Challenge> findByCreatedBy(String userId, int limit, Date lastCreatedAt) {
+        try {
+            Query query = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("createdBy", userId)
+                .orderBy("createdAt", Query.Direction.DESCENDING);
+
+            if (lastCreatedAt != null) {
+                query = query.startAfter(lastCreatedAt);
+            }
+
+            var docs = query.limit(limit).get().get().getDocuments();
+            return docs.stream()
+                .map(doc -> doc.toObject(Challenge.class))
+                .collect(Collectors.toList());
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Failed to find challenges by creator", e);
+        }
+    }
+
     public void deleteById(String id) {
         try {
             firestore.collection(COLLECTION_NAME).document(id).delete().get();
