@@ -134,3 +134,8 @@
 "prize_already_confirmed" = "Este premio ya ha sido confirmado";
 "confirmation_not_found" = "Confirmación no encontrada";
 "failed_to_load" = "Error al cargar";
+
+/* Prize Confirmation Link */
+"prize_confirmation_link" = "Enlace de Confirmación del Premio";
+"copy_link" = "Copiar Enlace";
+"share_this_link_message" = "Comparte este enlace para confirmar el hallazgo del premio";

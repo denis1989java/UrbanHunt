@@ -1,5 +1,6 @@
 package com.urbanhunt.app.controller;
 
+import com.urbanhunt.app.dto.ActivateChallengeResponse;
 import com.urbanhunt.app.dto.ChallengeDto;
 import com.urbanhunt.app.dto.CreateChallengeRequest;
 import com.urbanhunt.app.dto.UpdateChallengeRequest;
@@ -7,6 +8,7 @@ import com.urbanhunt.app.model.Challenge;
 import com.urbanhunt.app.model.Challenge.ChallengeStatus;
 import com.urbanhunt.app.model.Completion;
 import com.urbanhunt.app.model.Hint;
+import com.urbanhunt.app.model.PrizeConfirmation;
 import com.urbanhunt.app.security.SecurityUtils;
 import com.urbanhunt.app.security.UserPrincipal;
 import com.urbanhunt.app.service.ChallengeService;
@@ -176,7 +178,7 @@ public class ChallengeController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Challenge> updateStatus(
+    public ResponseEntity<?> updateStatus(
             @PathVariable String id,
             @RequestParam ChallengeStatus status) {
         Challenge oldChallenge = challengeService.getChallengeById(id);
@@ -189,7 +191,13 @@ public class ChallengeController {
 
         // Create prize confirmation when challenge is activated
         if (oldStatus != ChallengeStatus.ACTIVE && status == ChallengeStatus.ACTIVE) {
-            prizeConfirmationService.createConfirmation(id);
+            PrizeConfirmation confirmation = prizeConfirmationService.createConfirmation(id);
+            // Return special response with confirmationId for activation
+            ActivateChallengeResponse response = ActivateChallengeResponse.builder()
+                    .challenge(challenge)
+                    .confirmationId(confirmation.getId())
+                    .build();
+            return ResponseEntity.ok(response);
         }
 
         return ResponseEntity.ok(challenge);

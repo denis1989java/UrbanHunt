@@ -134,3 +134,8 @@
 "prize_already_confirmed" = "This prize has already been confirmed";
 "confirmation_not_found" = "Confirmation not found";
 "failed_to_load" = "Failed to load";
+
+/* Prize Confirmation Link */
+"prize_confirmation_link" = "Prize Confirmation Link";
+"copy_link" = "Copy Link";
+"share_this_link_message" = "Share this link to confirm prize finding";

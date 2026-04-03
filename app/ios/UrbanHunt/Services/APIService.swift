@@ -415,7 +415,7 @@ class APIService {
         return try JSONDecoder.apiDecoder.decode([Challenge].self, from: data)
     }
 
-    func updateChallengeStatus(challengeId: String, status: Challenge.ChallengeStatus) async throws -> Challenge {
+    func updateChallengeStatus(challengeId: String, status: Challenge.ChallengeStatus) async throws -> (challenge: Challenge, confirmationId: String?) {
         print("🔄 APIService.updateChallengeStatus called")
 
         guard let token = try await getFirebaseToken() else {
@@ -443,7 +443,15 @@ class APIService {
             throw APIError.invalidResponse
         }
 
-        return try JSONDecoder.apiDecoder.decode(Challenge.self, from: data)
+        // Try to decode as ActivateChallengeResponse first (when activating)
+        if let activateResponse = try? JSONDecoder.apiDecoder.decode(ActivateChallengeResponse.self, from: data) {
+            print("✅ Decoded ActivateChallengeResponse with confirmationId: \(activateResponse.confirmationId)")
+            return (activateResponse.challenge, activateResponse.confirmationId)
+        }
+
+        // Otherwise decode as regular Challenge
+        let challenge = try JSONDecoder.apiDecoder.decode(Challenge.self, from: data)
+        return (challenge, nil)
     }
 
     func updateChallenge(challengeId: String, title: String, country: String, cityName: String, prizePhotoUrl: String?) async throws -> Challenge {

@@ -39,6 +39,8 @@ struct EditChallengeView: View {
     @State private var editMode: EditMode = .inactive
     @State private var editingHintId: UUID?
     @State private var hintsModified = false
+    @State private var showConfirmationLink = false
+    @State private var confirmationDeepLink: String?
 
     var body: some View {
         NavigationView {
@@ -668,15 +670,22 @@ struct EditChallengeView: View {
         errorMessage = nil
 
         do {
-            let updatedChallenge = try await APIService.shared.updateChallengeStatus(
+            let result = try await APIService.shared.updateChallengeStatus(
                 challengeId: challenge.id,
                 status: .active
             )
 
             await MainActor.run {
                 isLoading = false
-                onChallengeUpdated?(updatedChallenge)
-                dismiss()
+                onChallengeUpdated?(result.challenge)
+
+                // Show confirmation link if available
+                if let confirmationId = result.confirmationId {
+                    confirmationDeepLink = "urbanhunt://confirm/\(confirmationId)"
+                    showConfirmationLink = true
+                } else {
+                    dismiss()
+                }
             }
         } catch {
             print("❌ Error activating challenge: \(error)")
@@ -739,6 +748,20 @@ struct AlertsModifier: ViewModifier {
                 Button("delete".localized, role: .destructive, action: onDelete)
             } message: {
                 Text("delete_challenge_message".localized)
+            }
+            .alert("prize_confirmation_link".localized, isPresented: $showConfirmationLink) {
+                Button("copy_link".localized) {
+                    if let link = confirmationDeepLink {
+                        UIPasteboard.general.string = link
+                    }
+                }
+                Button("done".localized, role: .cancel) {
+                    dismiss()
+                }
+            } message: {
+                if let link = confirmationDeepLink {
+                    Text("share_this_link_message".localized + ":\n\n\(link)")
+                }
             }
     }
 }
