@@ -167,9 +167,12 @@ struct EditChallengeView: View {
                 showUnsavedChangesAlert: $showUnsavedChangesAlert,
                 showActivateConfirmation: $showActivateConfirmation,
                 showDeleteConfirmation: $showDeleteConfirmation,
+                showConfirmationLink: $showConfirmationLink,
+                confirmationDeepLink: $confirmationDeepLink,
                 onSaveAndActivate: { Task { await saveAndActivate() } },
                 onActivate: { Task { await activateChallenge() } },
-                onDelete: { Task { await deleteChallenge() } }
+                onDelete: { Task { await deleteChallenge() } },
+                onDismiss: { dismiss() }
             ))
             .onAppear {
                 loadInitialData()
@@ -725,9 +728,12 @@ struct AlertsModifier: ViewModifier {
     @Binding var showUnsavedChangesAlert: Bool
     @Binding var showActivateConfirmation: Bool
     @Binding var showDeleteConfirmation: Bool
+    @Binding var showConfirmationLink: Bool
+    @Binding var confirmationDeepLink: String?
     let onSaveAndActivate: () -> Void
     let onActivate: () -> Void
     let onDelete: () -> Void
+    let onDismiss: () -> Void
 
     func body(content: Content) -> some View {
         content
@@ -756,7 +762,7 @@ struct AlertsModifier: ViewModifier {
                     }
                 }
                 Button("done".localized, role: .cancel) {
-                    dismiss()
+                    onDismiss()
                 }
             } message: {
                 if let link = confirmationDeepLink {
