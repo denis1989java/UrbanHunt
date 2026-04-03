@@ -20,6 +20,7 @@ struct UrbanHuntApp: App {
     @State private var latestVersion: String?
     @State private var deepLinkChallengeId: String?
     @State private var showDeepLinkedChallenge = false
+    @State private var showConfirmPrize = false
 
     var body: some Scene {
         WindowGroup {
@@ -39,6 +40,11 @@ struct UrbanHuntApp: App {
                         if let challengeId = deepLinkChallengeId {
                             ChallengeDetailView(challengeId: challengeId)
                                 .environmentObject(authViewModel)
+                        }
+                    }
+                    .sheet(isPresented: $showConfirmPrize) {
+                        if let challengeId = deepLinkChallengeId {
+                            ConfirmPrizeView(challengeId: challengeId)
                         }
                     }
                     .onChange(of: showDeepLinkedChallenge) { newValue in
@@ -67,9 +73,9 @@ struct UrbanHuntApp: App {
         print("🔗 URL host: \(url.host ?? "nil")")
         print("🔗 URL pathComponents: \(url.pathComponents)")
 
-        // Handle urbanhunt://challenge/{id}
+        // Handle urbanhunt://challenge/{id} - view challenge
         if url.scheme == "urbanhunt", url.host == "challenge" {
-            if let challengeId = url.pathComponents.last {
+            if let challengeId = url.pathComponents.last, !url.pathComponents.contains("confirm") {
                 print("🔗 Opening challenge: \(challengeId)")
                 print("🔗 Setting deepLinkChallengeId to: \(challengeId)")
                 deepLinkChallengeId = challengeId
@@ -79,7 +85,20 @@ struct UrbanHuntApp: App {
             } else {
                 print("❌ Could not extract challengeId from pathComponents")
             }
-        } else {
+        }
+        // Handle urbanhunt://challenge/{id}/confirm - confirm prize
+        else if url.scheme == "urbanhunt", url.host == "challenge", url.pathComponents.contains("confirm") {
+            // Extract challengeId from path like /challenge/{id}/confirm
+            if url.pathComponents.count >= 3 {
+                let challengeId = url.pathComponents[2] // Index: 0="", 1="challenge", 2="{id}"
+                print("🔗 Opening confirm prize for challenge: \(challengeId)")
+                deepLinkChallengeId = challengeId
+                showConfirmPrize = true
+            } else {
+                print("❌ Could not extract challengeId from confirm path")
+            }
+        }
+        else {
             print("❌ URL scheme or host doesn't match. scheme=\(url.scheme ?? "nil"), host=\(url.host ?? "nil")")
         }
     }

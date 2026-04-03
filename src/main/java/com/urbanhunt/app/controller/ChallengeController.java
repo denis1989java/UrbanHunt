@@ -10,6 +10,7 @@ import com.urbanhunt.app.model.Hint;
 import com.urbanhunt.app.security.SecurityUtils;
 import com.urbanhunt.app.security.UserPrincipal;
 import com.urbanhunt.app.service.ChallengeService;
+import com.urbanhunt.app.service.PrizeConfirmationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 public class ChallengeController {
 
     private final ChallengeService challengeService;
+    private final PrizeConfirmationService prizeConfirmationService;
 
     @PostMapping
     public ResponseEntity<ChallengeDto> createChallenge(@Valid @RequestBody CreateChallengeRequest request) {
@@ -177,10 +179,19 @@ public class ChallengeController {
     public ResponseEntity<Challenge> updateStatus(
             @PathVariable String id,
             @RequestParam ChallengeStatus status) {
-        Challenge challenge = challengeService.updateChallengeStatus(id, status);
-        if (challenge == null) {
+        Challenge oldChallenge = challengeService.getChallengeById(id);
+        if (oldChallenge == null) {
             return ResponseEntity.notFound().build();
         }
+
+        ChallengeStatus oldStatus = oldChallenge.getStatus();
+        Challenge challenge = challengeService.updateChallengeStatus(id, status);
+
+        // Create prize confirmation when challenge is activated
+        if (oldStatus != ChallengeStatus.ACTIVE && status == ChallengeStatus.ACTIVE) {
+            prizeConfirmationService.createConfirmation(id);
+        }
+
         return ResponseEntity.ok(challenge);
     }
 

@@ -118,3 +118,16 @@
 "unsaved_changes" = "Cambios No Guardados";
 "save_changes_before_activate" = "Tienes cambios no guardados. Por favor guárdalos antes de activar.";
 "save_and_activate" = "Guardar y Activar";
+
+/* Prize Confirmation */
+"prize_found" = "¡Premio Encontrado!";
+"optional_message" = "Agrega un mensaje opcional sobre tu hallazgo...";
+"add_photo_or_video" = "Agregar Foto o Video (Opcional)";
+"select_media" = "Seleccionar Foto o Video";
+"media_uploaded" = "Medio subido exitosamente";
+"confirm_prize" = "Confirmar Premio";
+"confirm_prize_found" = "Enviar Confirmación";
+"prize_confirmed_successfully" = "¡Felicitaciones! Tu hallazgo del premio ha sido confirmado.";
+"upload_failed" = "Subida fallida";
+"submit_failed" = "Envío fallido";
+"success" = "Éxito";

@@ -1,0 +1,26 @@
+meta {
+  name: Confirm Prize
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/prize-confirmations/challenge/:challengeId/confirm
+  body: json
+  auth: bearer
+}
+
+params:path {
+  challengeId:
+}
+
+auth:bearer {
+  token: {{firebase_token}}
+}
+
+body:json {
+  {
+    "message": "Found it! Amazing prize!",
+    "contentUrl": "https://storage.googleapis.com/urbanhunt-app.appspot.com/prize-confirmations/photo123.jpg"
+  }
+}

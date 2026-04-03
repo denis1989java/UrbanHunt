@@ -1,0 +1,75 @@
+package com.urbanhunt.app.service;
+
+import com.urbanhunt.app.model.Challenge;
+import com.urbanhunt.app.model.Challenge.ChallengeStatus;
+import com.urbanhunt.app.model.PrizeConfirmation;
+import com.urbanhunt.app.model.PrizeConfirmation.ConfirmationStatus;
+import com.urbanhunt.app.repository.PrizeConfirmationRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.Date;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class PrizeConfirmationService {
+
+    private final PrizeConfirmationRepository prizeConfirmationRepository;
+    private final ChallengeService challengeService;
+
+    /**
+     * Create a new prize confirmation when challenge is activated
+     */
+    public PrizeConfirmation createConfirmation(String challengeId) {
+        // Check if confirmation already exists
+        PrizeConfirmation existing = prizeConfirmationRepository.findByChallengeId(challengeId);
+        if (existing != null) {
+            return existing;
+        }
+
+        PrizeConfirmation confirmation = PrizeConfirmation.builder()
+                .challengeId(challengeId)
+                .status(ConfirmationStatus.NEW)
+                .createdAt(new Date())
+                .build();
+
+        return prizeConfirmationRepository.save(confirmation);
+    }
+
+    /**
+     * Confirm prize finding by user
+     */
+    public PrizeConfirmation confirmPrize(String challengeId, String userId, String message, String contentUrl) {
+        PrizeConfirmation confirmation = prizeConfirmationRepository.findByChallengeId(challengeId);
+        if (confirmation == null) {
+            throw new RuntimeException("Prize confirmation not found for challenge: " + challengeId);
+        }
+
+        if (confirmation.getStatus() == ConfirmationStatus.DONE) {
+            throw new RuntimeException("Prize already confirmed for this challenge");
+        }
+
+        // Update confirmation
+        confirmation.setUserId(userId);
+        confirmation.setStatus(ConfirmationStatus.DONE);
+        confirmation.setMessage(message);
+        confirmation.setContentUrl(contentUrl);
+        confirmation.setConfirmedAt(new Date());
+
+        PrizeConfirmation saved = prizeConfirmationRepository.save(confirmation);
+
+        // Update challenge status to COMPLETED
+        challengeService.updateChallengeStatus(challengeId, ChallengeStatus.COMPLETED);
+
+        return saved;
+    }
+
+    public PrizeConfirmation getConfirmationByChallengeId(String challengeId) {
+        return prizeConfirmationRepository.findByChallengeId(challengeId);
+    }
+
+    public List<PrizeConfirmation> getConfirmationsByUserId(String userId) {
+        return prizeConfirmationRepository.findByUserId(userId);
+    }
+}

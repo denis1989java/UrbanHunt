@@ -118,3 +118,16 @@
 "unsaved_changes" = "Unsaved Changes";
 "save_changes_before_activate" = "You have unsaved changes. Please save them before activating.";
 "save_and_activate" = "Save & Activate";
+
+/* Prize Confirmation */
+"prize_found" = "Prize Found!";
+"optional_message" = "Add an optional message about your find...";
+"add_photo_or_video" = "Add Photo or Video (Optional)";
+"select_media" = "Select Photo or Video";
+"media_uploaded" = "Media uploaded successfully";
+"confirm_prize" = "Confirm Prize";
+"confirm_prize_found" = "Submit Confirmation";
+"prize_confirmed_successfully" = "Congratulations! Your prize find has been confirmed.";
+"upload_failed" = "Upload failed";
+"submit_failed" = "Submission failed";
+"success" = "Success";

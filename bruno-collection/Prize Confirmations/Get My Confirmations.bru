@@ -1,0 +1,15 @@
+meta {
+  name: Get My Prize Confirmations
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/api/prize-confirmations/user/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{firebase_token}}
+}

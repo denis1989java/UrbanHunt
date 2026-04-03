@@ -665,6 +665,74 @@ class APIService {
         return try JSONDecoder().decode(UserSummary.self, from: data)
     }
 
+    // MARK: - Prize Confirmations
+
+    func getPrizeConfirmation(challengeId: String) async throws -> PrizeConfirmation {
+        guard let token = try await getFirebaseToken() else {
+            throw APIError.noToken
+        }
+
+        guard let url = URL(string: "\(Config.apiBaseURL)/api/prize-confirmations/challenge/\(challengeId)") else {
+            throw APIError.invalidResponse
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw APIError.invalidResponse
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(PrizeConfirmation.self, from: data)
+    }
+
+    func confirmPrize(challengeId: String, message: String?, contentUrl: String?) async throws -> PrizeConfirmation {
+        guard let token = try await getFirebaseToken() else {
+            throw APIError.noToken
+        }
+
+        guard let url = URL(string: "\(Config.apiBaseURL)/api/prize-confirmations/challenge/\(challengeId)/confirm") else {
+            throw APIError.invalidResponse
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any?] = [
+            "message": message,
+            "contentUrl": contentUrl
+        ]
+
+        let jsonData = try JSONSerialization.data(withJSONObject: body.compactMapValues { $0 })
+        request.httpBody = jsonData
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw APIError.invalidResponse
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(PrizeConfirmation.self, from: data)
+    }
+
     // MARK: - Helper
 
     private func getFirebaseToken() async throws -> String? {

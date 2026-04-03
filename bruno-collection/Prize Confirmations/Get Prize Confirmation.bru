@@ -1,0 +1,19 @@
+meta {
+  name: Get Prize Confirmation by Challenge
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/prize-confirmations/challenge/:challengeId
+  body: none
+  auth: bearer
+}
+
+params:path {
+  challengeId:
+}
+
+auth:bearer {
+  token: {{firebase_token}}
+}
