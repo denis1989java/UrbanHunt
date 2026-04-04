@@ -186,13 +186,7 @@ struct ConfirmPrizeView: View {
                 }
 
                 if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.red.opacity(0.1))
-                        .cornerRadius(8)
+                    InlineErrorView(message: errorMessage)
                 }
 
                 // Submit button
@@ -233,7 +227,10 @@ struct ConfirmPrizeView: View {
         if let imageData = selectedImageData {
             print("📤 Uploading selected media...")
             do {
-                contentUrl = try await StorageService.shared.uploadPrizeConfirmationContent(imageData)
+                contentUrl = try await StorageService.shared.uploadPrizeConfirmationContent(
+                    confirmationId: confirmationId,
+                    data: imageData
+                )
                 print("✅ Media uploaded successfully: \(contentUrl ?? "nil")")
             } catch {
                 print("❌ Upload failed: \(error)")

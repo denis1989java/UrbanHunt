@@ -18,6 +18,9 @@ struct MyChallengesView: View {
     @State private var showCreateChallenge = false
     @State private var selectedChallenge: Challenge?
     @State private var showEditChallenge = false
+    @State private var showQRCode = false
+    @State private var qrDeepLink: String?
+    @State private var qrChallengeTitle: String?
 
     var body: some View {
         NavigationView {
@@ -26,16 +29,11 @@ struct MyChallengesView: View {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let errorMessage = errorMessage {
-                    VStack(spacing: 16) {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                        Button("Retry") {
-                            Task {
-                                await loadChallenges()
-                            }
+                    ErrorView(message: errorMessage) {
+                        Task {
+                            await loadChallenges()
                         }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if challenges.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "map")
@@ -96,10 +94,20 @@ struct MyChallengesView: View {
                 }
             }
             .sheet(isPresented: $showCreateChallenge) {
-                CreateChallengeView(onChallengeCreated: { newChallenge in
-                    // Insert new challenge at the beginning
-                    challenges.insert(newChallenge, at: 0)
-                })
+                CreateChallengeView(
+                    onChallengeCreated: { newChallenge in
+                        // Insert new challenge at the beginning
+                        challenges.insert(newChallenge, at: 0)
+                    },
+                    onShowQRCode: { deepLink, title in
+                        // Show QR code after CreateChallengeView is dismissed
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            qrDeepLink = deepLink
+                            qrChallengeTitle = title
+                            showQRCode = true
+                        }
+                    }
+                )
             }
             .sheet(isPresented: $showEditChallenge) {
                 if let challenge = selectedChallenge {
@@ -116,6 +124,11 @@ struct MyChallengesView: View {
                             challenges.removeAll { $0.id == selectedChallenge?.id }
                         }
                     )
+                }
+            }
+            .sheet(isPresented: $showQRCode) {
+                if let deepLink = qrDeepLink, let title = qrChallengeTitle {
+                    QRCodeView(deepLink: deepLink, challengeTitle: title)
                 }
             }
             .onAppear {
@@ -201,6 +214,18 @@ struct MyChallengeCard: View {
                     Text("\(challenge.cityName), \(challenge.country)")
                         .font(.caption)
                         .foregroundColor(.gray)
+                }
+            }
+
+            // Private location note (if exists)
+            if let location = challenge.location, !location.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                    Text(location)
+                        .font(.caption)
+                        .foregroundColor(.blue)
                 }
             }
 

@@ -55,9 +55,32 @@ struct EditProfileView: View {
                                         name = String(newValue.prefix(20))
                                     }
                                 }
-                            formTextField(title: "social_media_link".localized, text: $socialMediaUrl, placeholder: "instagram_or_tiktok_url".localized)
-                                .keyboardType(.URL)
-                                .autocapitalization(.none)
+
+                            // Social media link with preview
+                            VStack(alignment: .leading, spacing: 8) {
+                                formTextField(title: "social_media_link".localized, text: $socialMediaUrl, placeholder: "instagram_or_tiktok_url".localized)
+                                    .keyboardType(.URL)
+                                    .autocapitalization(.none)
+
+                                // Preview of beautified link
+                                if !socialMediaUrl.trimmingCharacters(in: .whitespaces).isEmpty {
+                                    HStack(spacing: 8) {
+                                        // Platform icon
+                                        if let icon = SocialMediaHelper.platformIcon(for: socialMediaUrl) {
+                                            Image(systemName: icon)
+                                                .font(.caption)
+                                                .foregroundColor(.blue)
+                                        }
+
+                                        Text("Preview: \(SocialMediaHelper.beautifyURL(socialMediaUrl))")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 4)
+                                }
+                            }
                         }
                         
                         // --- Action Buttons ---
@@ -87,9 +110,7 @@ struct EditProfileView: View {
                         
                         // --- Error Message ---
                         if let errorMessage = authViewModel.errorMessage {
-                            Text(errorMessage)
-                                .font(.caption)
-                                .foregroundColor(.red)
+                            InlineErrorView(message: errorMessage)
                         }
                     }
                     .padding(.horizontal, 24)

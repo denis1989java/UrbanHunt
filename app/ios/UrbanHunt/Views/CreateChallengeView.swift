@@ -20,10 +20,12 @@ struct CreateChallengeView: View {
     @Environment(\.dismiss) var dismiss
 
     let onChallengeCreated: ((Challenge) -> Void)?
+    let onShowQRCode: ((String, String) -> Void)? // deepLink, title
 
     @State private var title: String = ""
     @State private var country: String = ""
     @State private var cityName: String = ""
+    @State private var location: String = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
 
@@ -38,6 +40,7 @@ struct CreateChallengeView: View {
     @State private var editingHintId: UUID?
     @State private var prizePhotoItem: PhotosPickerItem?
     @State private var prizePhoto: UIImage?
+    @State private var createdChallenge: Challenge?
 
     var body: some View {
         NavigationView {
@@ -103,6 +106,31 @@ struct CreateChallengeView: View {
                         .buttonStyle(PlainButtonStyle())
                         .disabled(availableCities.isEmpty)
                         .opacity(availableCities.isEmpty ? 0.5 : 1.0)
+                    }
+
+                    // Location Field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("location".localized)
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+
+                        TextField("enter_location".localized, text: $location)
+                            .padding()
+                            .background(Color(uiColor: .systemBackground))
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                            .onChange(of: location) { _, newValue in
+                                if newValue.count > 200 {
+                                    location = String(newValue.prefix(200))
+                                }
+                            }
+
+                        Text("location_note".localized)
+                            .font(.caption2)
+                            .foregroundColor(.gray.opacity(0.8))
                     }
 
                     // Challenge Title
@@ -265,9 +293,7 @@ struct CreateChallengeView: View {
 
                     // Error Message
                     if let errorMessage = errorMessage {
-                        Text(errorMessage)
-                            .font(.caption)
-                            .foregroundColor(.red)
+                        InlineErrorView(message: errorMessage)
                     }
 
                     // Action Buttons
@@ -409,6 +435,7 @@ struct CreateChallengeView: View {
                     title: title.trimmingCharacters(in: .whitespaces),
                     country: country.trimmingCharacters(in: .whitespaces),
                     cityName: cityName.trimmingCharacters(in: .whitespaces),
+                    location: location.trimmingCharacters(in: .whitespaces).isEmpty ? nil : location.trimmingCharacters(in: .whitespaces),
                     prizePhotoUrl: prizePhotoUrl
                 )
 
@@ -441,9 +468,18 @@ struct CreateChallengeView: View {
 
                 await MainActor.run {
                     isLoading = false
-                    // Notify parent with the new challenge
+                    // Store challenge info
+                    createdChallenge = challenge
+
+                    // Notify parent and dismiss FIRST
                     onChallengeCreated?(challenge)
                     dismiss()
+
+                    // Then show QR code through parent callback
+                    if let confirmationId = challenge.confirmationId {
+                        let deepLink = "urbanhunt://confirm/\(confirmationId)"
+                        onShowQRCode?(deepLink, challenge.title)
+                    }
                 }
             } catch let apiError as APIError {
                 print("❌ Error creating challenge: \(apiError)")
@@ -481,7 +517,7 @@ struct CreateChallengeView: View {
 }
 
 #Preview {
-    CreateChallengeView(onChallengeCreated: nil)
+    CreateChallengeView(onChallengeCreated: nil, onShowQRCode: nil)
 }
 
 // MARK: - Country Picker Sheet

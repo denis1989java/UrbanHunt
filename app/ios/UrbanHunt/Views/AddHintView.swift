@@ -178,10 +178,8 @@ struct AddHintView: View {
     @ViewBuilder
     private var errorMessageView: some View {
         if let errorMessage = errorMessage {
-            Text(errorMessage)
-                .foregroundColor(.red)
-                .font(.caption)
-                .padding()
+            InlineErrorView(message: errorMessage)
+                .padding(.horizontal)
         }
     }
 

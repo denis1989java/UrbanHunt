@@ -71,9 +71,7 @@ struct SettingsView: View {
 
                 if let errorMessage = errorMessage {
                     Section {
-                        Text(errorMessage)
-                            .font(.caption)
-                            .foregroundColor(.red)
+                        InlineErrorView(message: errorMessage)
                     }
                 }
             }

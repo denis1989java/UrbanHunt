@@ -2,6 +2,7 @@ package com.urbanhunt.app.service;
 
 import com.urbanhunt.app.model.Challenge;
 import com.urbanhunt.app.model.Challenge.ChallengeStatus;
+import com.urbanhunt.app.model.Completion;
 import com.urbanhunt.app.model.PrizeConfirmation;
 import com.urbanhunt.app.model.PrizeConfirmation.ConfirmationStatus;
 import com.urbanhunt.app.repository.PrizeConfirmationRepository;
@@ -59,8 +60,13 @@ public class PrizeConfirmationService {
 
         PrizeConfirmation saved = prizeConfirmationRepository.save(confirmation);
 
-        // Update challenge status to COMPLETED
-        challengeService.updateChallengeStatus(confirmation.getChallengeId(), ChallengeStatus.COMPLETED);
+        // Create completion object and complete the challenge
+        Completion completion = Completion.builder()
+                .userId(userId)
+                .completedAt(new Date())
+                .build();
+
+        challengeService.completeChallenge(confirmation.getChallengeId(), completion);
 
         return saved;
     }
@@ -87,8 +93,13 @@ public class PrizeConfirmationService {
 
         PrizeConfirmation saved = prizeConfirmationRepository.save(confirmation);
 
-        // Update challenge status to COMPLETED
-        challengeService.updateChallengeStatus(challengeId, ChallengeStatus.COMPLETED);
+        // Create completion object and complete the challenge
+        Completion completion = Completion.builder()
+                .userId(userId)
+                .completedAt(new Date())
+                .build();
+
+        challengeService.completeChallenge(challengeId, completion);
 
         return saved;
     }

@@ -120,6 +120,7 @@ struct HintCard: View {
         cityName: "Barcelona",
         createdBy: nil,
         creator: nil,
+        location: nil,
         prizePhotoUrl: nil,
         createdAt: Date(),
         hints: [
@@ -127,6 +128,7 @@ struct HintCard: View {
         ],
         completion: nil,
         commentsCount: 0,
-        nextHintDate: nil
+        nextHintDate: nil,
+        confirmationId: nil
     ))
 }

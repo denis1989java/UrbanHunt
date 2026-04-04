@@ -67,10 +67,7 @@ struct LoginView: View {
 
             // Error Message
             if let errorMessage = authViewModel.errorMessage {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .multilineTextAlignment(.center)
+                InlineErrorView(message: errorMessage)
                     .padding(.horizontal, 32)
                     .padding(.top, 8)
             }

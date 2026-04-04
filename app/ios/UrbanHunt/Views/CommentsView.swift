@@ -28,14 +28,9 @@ struct CommentsView: View {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let errorMessage = errorMessage {
-                    VStack(spacing: 16) {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                        Button("Retry") {
-                            loadComments()
-                        }
+                    ErrorView(message: errorMessage) {
+                        loadComments()
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if comments.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "bubble.left.and.bubble.right")

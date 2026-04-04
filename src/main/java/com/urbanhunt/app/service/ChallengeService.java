@@ -115,7 +115,7 @@ public class ChallengeService {
         return challengeRepository.save(challenge);
     }
 
-    public Challenge updateChallenge(String challengeId, String title, String country, String cityName, String prizePhotoUrl) {
+    public Challenge updateChallenge(String challengeId, String title, String country, String cityName, String location, String prizePhotoUrl) {
         // Validate challenge title for profanity
         profanityFilterService.validateText(title, "challenge title");
 
@@ -124,9 +124,21 @@ public class ChallengeService {
             return null;
         }
 
+        // Validate: cannot update COMPLETED challenges
+        if (challenge.getStatus() == ChallengeStatus.COMPLETED) {
+            throw new IllegalArgumentException("Cannot update a completed challenge.");
+        }
+
+        // Validate: if challenge is ACTIVE, must have at least 1 hint
+        if (challenge.getStatus() == ChallengeStatus.ACTIVE &&
+            (challenge.getHints() == null || challenge.getHints().isEmpty())) {
+            throw new IllegalArgumentException("Cannot save changes. Active challenge must have at least one hint.");
+        }
+
         challenge.setTitle(title);
         challenge.setCountry(country);
         challenge.setCityName(cityName);
+        challenge.setLocation(location);
         challenge.setPrizePhotoUrl(prizePhotoUrl);
 
         return challengeRepository.save(challenge);

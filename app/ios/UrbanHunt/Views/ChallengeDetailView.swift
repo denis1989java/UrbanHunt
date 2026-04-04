@@ -15,6 +15,7 @@ struct ChallengeDetailView: View {
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var showUserProfile = false
+    @State private var showWinnerConfirmation = false
     @Environment(\.dismiss) var dismiss
 
     init(challengeId: String) {
@@ -49,21 +50,11 @@ struct ChallengeDetailView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let errorMessage = errorMessage {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 60))
-                            .foregroundColor(.red)
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
-                        Button("Retry") {
-                            Task {
-                                await loadChallenge()
-                            }
+                    ErrorView(message: errorMessage) {
+                        Task {
+                            await loadChallenge()
                         }
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let challenge = challenge {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
@@ -177,6 +168,31 @@ struct ChallengeDetailView: View {
                                 .padding(.horizontal)
                             }
 
+                            // Confirmation section for completed challenges
+                            if challenge.status == .completed, let confirmationId = challenge.confirmationId {
+                                Button(action: {
+                                    showWinnerConfirmation = true
+                                }) {
+                                    HStack {
+                                        Image(systemName: "checkmark.seal.fill")
+                                            .foregroundColor(.green)
+                                        Text("confirmation".localized)
+                                            .font(.headline)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
+                                    .padding()
+                                    .background(Color(uiColor: .secondarySystemBackground))
+                                    .cornerRadius(12)
+                                    .padding(.horizontal)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+
                             // Hints section
                             if let hints = challenge.hints, !hints.isEmpty {
                                 VStack(alignment: .leading, spacing: 12) {
@@ -259,6 +275,11 @@ struct ChallengeDetailView: View {
                     .sheet(isPresented: $showUserProfile) {
                         if let createdBy = challenge.createdBy {
                             UserProfileView(userId: createdBy)
+                        }
+                    }
+                    .sheet(isPresented: $showWinnerConfirmation) {
+                        if let confirmationId = challenge.confirmationId {
+                            WinnerConfirmationView(confirmationId: confirmationId)
                         }
                     }
                 } else {

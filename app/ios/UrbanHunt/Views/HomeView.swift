@@ -181,16 +181,11 @@ struct HomeView: View {
                         ProgressView()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else if let errorMessage = viewModel.errorMessage {
-                        VStack(spacing: 16) {
-                            Text(errorMessage)
-                                .foregroundColor(.red)
-                            Button("Retry") {
-                                Task {
-                                    await viewModel.loadChallenges()
-                                }
+                        ErrorView(message: errorMessage) {
+                            Task {
+                                await viewModel.loadChallenges()
                             }
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else if viewModel.challenges.isEmpty {
                         VStack(spacing: 16) {
                             Image(systemName: "map")

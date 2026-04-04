@@ -16,15 +16,25 @@ struct EditChallengeView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @Environment(\.dismiss) var dismiss
 
+    @State private var currentStatus: Challenge.ChallengeStatus
+    @State private var hasCompletion: Bool
     @State private var title: String = ""
     @State private var country: String = ""
     @State private var cityName: String = ""
+    @State private var location: String = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
+
+    init(challenge: Challenge, onChallengeUpdated: ((Challenge) -> Void)?, onChallengeDeleted: (() -> Void)?) {
+        self.challenge = challenge
+        self.onChallengeUpdated = onChallengeUpdated
+        self.onChallengeDeleted = onChallengeDeleted
+        _currentStatus = State(initialValue: challenge.status)
+        _hasCompletion = State(initialValue: challenge.completion != nil)
+    }
     @State private var showDeleteConfirmation = false
-    @State private var showActivateConfirmation = false
     @State private var hasUnsavedChanges = false
-    @State private var showUnsavedChangesAlert = false
+    @State private var showNoHintsAlert = false
 
     @State private var countries: [Country] = []
     @State private var selectedCountry: Country?
@@ -41,6 +51,9 @@ struct EditChallengeView: View {
     @State private var hintsModified = false
     @State private var showConfirmationLink = false
     @State private var confirmationDeepLink: String?
+    @State private var showCompleteChallenge = false
+    @State private var prizeConfirmationId: String?
+    @State private var showQRCode = false
 
     var body: some View {
         NavigationView {
@@ -70,16 +83,30 @@ struct EditChallengeView: View {
                     }
                 }
 
-                if challenge.status == .draft {
+                if currentStatus == .draft {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: {
-                            if hasUnsavedChanges {
-                                showUnsavedChangesAlert = true
+                            if existingHints.isEmpty {
+                                showNoHintsAlert = true
                             } else {
-                                showActivateConfirmation = true
+                                Task {
+                                    await activateChallenge()
+                                }
                             }
                         }) {
                             Text("activate".localized)
+                                .foregroundColor(.blue)
+                        }
+                        .disabled(isLoading)
+                    }
+                }
+
+                if currentStatus == .active && !hasCompletion {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            loadPrizeConfirmationId()
+                        }) {
+                            Text("complete".localized)
                                 .foregroundColor(.blue)
                         }
                         .disabled(isLoading)
@@ -163,20 +190,37 @@ struct EditChallengeView: View {
                     )
                 }
             }
+            .sheet(isPresented: $showCompleteChallenge) {
+                if let confirmationId = prizeConfirmationId {
+                    ConfirmPrizeView(confirmationId: confirmationId)
+                }
+            }
+            .sheet(isPresented: $showQRCode) {
+                if let deepLink = confirmationDeepLink {
+                    QRCodeView(deepLink: deepLink, challengeTitle: challenge.title)
+                }
+            }
             .modifier(AlertsModifier(
-                showUnsavedChangesAlert: $showUnsavedChangesAlert,
-                showActivateConfirmation: $showActivateConfirmation,
                 showDeleteConfirmation: $showDeleteConfirmation,
                 showConfirmationLink: $showConfirmationLink,
+                showNoHintsAlert: $showNoHintsAlert,
                 confirmationDeepLink: $confirmationDeepLink,
-                onSaveAndActivate: { Task { await saveAndActivate() } },
-                onActivate: { Task { await activateChallenge() } },
                 onDelete: { Task { await deleteChallenge() } },
-                onDismiss: { dismiss() }
+                onDismiss: { dismiss() },
+                onViewQRCode: { showQRCode = true }
             ))
             .onAppear {
                 loadInitialData()
                 loadCountries()
+                // Reload challenge data to get latest hints
+                Task {
+                    await refreshChallenge()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshChallenges"))) { _ in
+                Task {
+                    await refreshChallenge()
+                }
             }
         }
     }
@@ -186,6 +230,7 @@ struct EditChallengeView: View {
             statusDisplay
             countryPicker
             cityPicker
+            locationField
             titleField
             prizePhotoSection
             hintsSection
@@ -199,7 +244,9 @@ struct EditChallengeView: View {
                 .foregroundColor(.gray)
 
             Button(action: {
-                showCountryPicker = true
+                if currentStatus != .completed {
+                    showCountryPicker = true
+                }
             }) {
                 HStack {
                     Text(country.isEmpty ? "select_country".localized : country)
@@ -219,6 +266,8 @@ struct EditChallengeView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+            .disabled(currentStatus == .completed)
+            .opacity(currentStatus == .completed ? 0.5 : 1.0)
         }
     }
 
@@ -229,7 +278,7 @@ struct EditChallengeView: View {
                 .foregroundColor(.gray)
 
             Button(action: {
-                if !availableCities.isEmpty {
+                if !availableCities.isEmpty && currentStatus != .completed {
                     showCityPicker = true
                 }
             }) {
@@ -251,8 +300,8 @@ struct EditChallengeView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
-            .disabled(availableCities.isEmpty)
-            .opacity(availableCities.isEmpty ? 0.5 : 1.0)
+            .disabled(availableCities.isEmpty || currentStatus == .completed)
+            .opacity((availableCities.isEmpty || currentStatus == .completed) ? 0.5 : 1.0)
         }
     }
 
@@ -278,6 +327,39 @@ struct EditChallengeView: View {
                     }
                     checkForUnsavedChanges()
                 }
+                .disabled(currentStatus == .completed)
+                .opacity(currentStatus == .completed ? 0.5 : 1.0)
+        }
+    }
+
+    private var locationField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("location".localized)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+
+            TextField("enter_location".localized, text: $location)
+                .padding()
+                .background(Color(uiColor: .systemBackground))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+                .onChange(of: location) { _, newValue in
+                    let maxLength = 200
+                    if newValue.count > maxLength {
+                        let truncated = newValue.prefix(maxLength)
+                        location = String(truncated)
+                    }
+                    checkForUnsavedChanges()
+                }
+                .disabled(currentStatus == .completed)
+                .opacity(currentStatus == .completed ? 0.5 : 1.0)
+
+            Text("location_note".localized)
+                .font(.caption2)
+                .foregroundColor(.gray.opacity(0.8))
         }
     }
 
@@ -364,6 +446,8 @@ struct EditChallengeView: View {
                         .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                 )
             }
+            .disabled(currentStatus == .completed)
+            .opacity(currentStatus == .completed ? 0.5 : 1.0)
             .onChange(of: prizePhotoItem) { _, newItem in
                 Task {
                     if let data = try? await newItem?.loadTransferable(type: Data.self),
@@ -383,16 +467,18 @@ struct EditChallengeView: View {
                     .font(.subheadline)
                     .foregroundColor(.gray)
                 Spacer()
-                Button(action: {
-                    showAddHint = true
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus")
-                            .font(.caption)
-                        Text("add_hint".localized)
-                            .font(.caption)
+                if currentStatus != .completed {
+                    Button(action: {
+                        showAddHint = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                                .font(.caption)
+                            Text("add_hint".localized)
+                                .font(.caption)
+                        }
+                        .foregroundColor(.blue)
                     }
-                    .foregroundColor(.blue)
                 }
             }
 
@@ -457,35 +543,41 @@ struct EditChallengeView: View {
                         .padding(.vertical, 8)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            if editMode == .inactive {
+                            if editMode == .inactive && currentStatus != .completed {
                                 editingHintId = hintWithId.id
                             }
                         }
                         .onLongPressGesture(minimumDuration: 0.5) {
-                            let generator = UIImpactFeedbackGenerator(style: .medium)
-                            generator.impactOccurred()
-                            withAnimation {
-                                editMode = .active
+                            if currentStatus != .completed {
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
+                                withAnimation {
+                                    editMode = .active
+                                }
                             }
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                if let index = existingHints.firstIndex(where: { $0.id == hintWithId.id }) {
-                                    existingHints.remove(at: index)
-                                    hintsModified = true
-                                    checkForUnsavedChanges()
+                            if currentStatus != .completed {
+                                Button(role: .destructive) {
+                                    if let index = existingHints.firstIndex(where: { $0.id == hintWithId.id }) {
+                                        existingHints.remove(at: index)
+                                        hintsModified = true
+                                        checkForUnsavedChanges()
+                                    }
+                                } label: {
+                                    Label("delete".localized, systemImage: "trash")
                                 }
-                            } label: {
-                                Label("delete".localized, systemImage: "trash")
                             }
                         }
                         .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
                         .listRowBackground(Color.clear)
                     }
                     .onMove { from, to in
-                        existingHints.move(fromOffsets: from, toOffset: to)
-                        hintsModified = true
-                        checkForUnsavedChanges()
+                        if currentStatus != .completed {
+                            existingHints.move(fromOffsets: from, toOffset: to)
+                            hintsModified = true
+                            checkForUnsavedChanges()
+                        }
                     }
                 }
                 .listStyle(.plain)
@@ -505,7 +597,16 @@ struct EditChallengeView: View {
 
     private var actionButtons: some View {
         VStack(spacing: 16) {
-            saveButton
+            if currentStatus != .completed {
+                saveButton
+            }
+
+            // Show QR Code button for DRAFT and ACTIVE challenges
+            if (currentStatus == .draft || currentStatus == .active),
+               let confirmationId = challenge.confirmationId,
+               !confirmationId.isEmpty {
+                viewQRCodeButton
+            }
 
             if challenge.status != .archived {
                 deleteButton
@@ -530,6 +631,24 @@ struct EditChallengeView: View {
         .disabled(isLoading || !hasUnsavedChanges || !isFormValid)
     }
 
+    private var viewQRCodeButton: some View {
+        Button(action: {
+            if let confirmationId = challenge.confirmationId {
+                confirmationDeepLink = "urbanhunt://confirm/\(confirmationId)"
+                showQRCode = true
+            }
+        }) {
+            Text("view_qr_code".localized)
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.green)
+                .cornerRadius(12)
+        }
+        .disabled(isLoading)
+    }
+
     private var deleteButton: some View {
         Button(action: {
             showDeleteConfirmation = true
@@ -547,15 +666,13 @@ struct EditChallengeView: View {
     @ViewBuilder
     private var errorMessageView: some View {
         if let errorMessage = errorMessage {
-            Text(errorMessage)
-                .foregroundColor(.red)
-                .font(.caption)
-                .padding()
+            InlineErrorView(message: errorMessage)
+                .padding(.horizontal)
         }
     }
 
     private var statusText: String {
-        switch challenge.status {
+        switch currentStatus {
         case .draft:
             return "draft".localized
         case .active:
@@ -568,7 +685,7 @@ struct EditChallengeView: View {
     }
 
     private var statusColor: Color {
-        switch challenge.status {
+        switch currentStatus {
         case .draft:
             return .orange
         case .active:
@@ -581,17 +698,56 @@ struct EditChallengeView: View {
     }
 
     private var isFormValid: Bool {
-        !title.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !country.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !cityName.trimmingCharacters(in: .whitespaces).isEmpty
+        let basicFieldsValid = !title.trimmingCharacters(in: .whitespaces).isEmpty &&
+            !country.trimmingCharacters(in: .whitespaces).isEmpty &&
+            !cityName.trimmingCharacters(in: .whitespaces).isEmpty
+
+        // If challenge is active, must have at least 1 hint
+        if challenge.status == .active {
+            return basicFieldsValid && !existingHints.isEmpty
+        }
+
+        return basicFieldsValid
     }
 
     private func loadInitialData() {
         title = challenge.title
         country = challenge.country
         cityName = challenge.cityName
+        location = challenge.location ?? ""
         existingHints = (challenge.hints ?? []).map { HintWithId(hint: $0) }
         prizePhotoUrl = challenge.prizePhotoUrl
+    }
+
+    private func loadPrizeConfirmationId() {
+        Task {
+            do {
+                let confirmation = try await APIService.shared.getPrizeConfirmation(challengeId: challenge.id)
+                await MainActor.run {
+                    prizeConfirmationId = confirmation.id
+                    showCompleteChallenge = true
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func refreshChallenge() async {
+        do {
+            let updatedChallenge = try await APIService.shared.getChallenge(id: challenge.id)
+            await MainActor.run {
+                // Update hints locally without triggering full update
+                existingHints = (updatedChallenge.hints ?? []).map { HintWithId(hint: $0) }
+                hasCompletion = updatedChallenge.completion != nil
+                currentStatus = updatedChallenge.status  // Update status as well
+                onChallengeUpdated?(updatedChallenge)
+            }
+        } catch {
+            // Ignore errors on refresh
+        }
     }
 
     private func loadCountries() {
@@ -638,6 +794,7 @@ struct EditChallengeView: View {
                 title: title.trimmingCharacters(in: .whitespaces),
                 country: country.trimmingCharacters(in: .whitespaces),
                 cityName: cityName.trimmingCharacters(in: .whitespaces),
+                location: location.trimmingCharacters(in: .whitespaces).isEmpty ? nil : location.trimmingCharacters(in: .whitespaces),
                 prizePhotoUrl: finalPrizePhotoUrl
             )
 
@@ -661,13 +818,6 @@ struct EditChallengeView: View {
         }
     }
 
-    private func saveAndActivate() async {
-        await saveChanges()
-        if !hasUnsavedChanges {
-            await activateChallenge()
-        }
-    }
-
     private func activateChallenge() async {
         isLoading = true
         errorMessage = nil
@@ -680,15 +830,9 @@ struct EditChallengeView: View {
 
             await MainActor.run {
                 isLoading = false
+                currentStatus = .active  // Update local status
                 onChallengeUpdated?(result.challenge)
-
-                // Show confirmation link if available
-                if let confirmationId = result.confirmationId {
-                    confirmationDeepLink = "urbanhunt://confirm/\(confirmationId)"
-                    showConfirmationLink = true
-                } else {
-                    dismiss()
-                }
+                // No alerts - just update silently
             }
         } catch {
             print("❌ Error activating challenge: \(error)")
@@ -725,37 +869,31 @@ struct EditChallengeView: View {
 }
 
 struct AlertsModifier: ViewModifier {
-    @Binding var showUnsavedChangesAlert: Bool
-    @Binding var showActivateConfirmation: Bool
     @Binding var showDeleteConfirmation: Bool
     @Binding var showConfirmationLink: Bool
+    @Binding var showNoHintsAlert: Bool
     @Binding var confirmationDeepLink: String?
-    let onSaveAndActivate: () -> Void
-    let onActivate: () -> Void
     let onDelete: () -> Void
     let onDismiss: () -> Void
+    let onViewQRCode: () -> Void
 
     func body(content: Content) -> some View {
         content
-            .alert("unsaved_changes".localized, isPresented: $showUnsavedChangesAlert) {
-                Button("cancel".localized, role: .cancel) { }
-                Button("save_and_activate".localized, action: onSaveAndActivate)
-            } message: {
-                Text("save_changes_before_activate".localized)
-            }
-            .alert("activate_challenge".localized, isPresented: $showActivateConfirmation) {
-                Button("cancel".localized, role: .cancel) { }
-                Button("activate".localized, action: onActivate)
-            } message: {
-                Text("activate_challenge_message".localized)
-            }
             .alert("delete_challenge".localized, isPresented: $showDeleteConfirmation) {
                 Button("cancel".localized, role: .cancel) { }
                 Button("delete".localized, role: .destructive, action: onDelete)
             } message: {
                 Text("delete_challenge_message".localized)
             }
+            .alert("activate_challenge".localized, isPresented: $showNoHintsAlert) {
+                Button("ok".localized, role: .cancel) { }
+            } message: {
+                Text("cannot_activate_without_hints".localized)
+            }
             .alert("prize_confirmation_link".localized, isPresented: $showConfirmationLink) {
+                Button("view_qr_code".localized) {
+                    onViewQRCode()
+                }
                 Button("copy_link".localized) {
                     if let link = confirmationDeepLink {
                         UIPasteboard.general.string = link

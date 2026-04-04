@@ -25,5 +25,8 @@ public class UpdateChallengeRequest {
     @Size(min = 1, max = 50, message = "City must be between 1 and 50 characters")
     private String cityName;
 
+    @Size(max = 200, message = "Location must be less than 200 characters")
+    private String location; // Private note for creator
+
     private String prizePhotoUrl; // Optional prize photo URL
 }

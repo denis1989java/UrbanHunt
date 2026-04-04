@@ -119,12 +119,14 @@ class ChallengesViewModel: ObservableObject {
                 cityName: updatedChallenge.cityName,
                 createdBy: updatedChallenge.createdBy,
                 creator: updatedChallenge.creator,
+                location: updatedChallenge.location,
                 prizePhotoUrl: updatedChallenge.prizePhotoUrl,
                 createdAt: updatedChallenge.createdAt,
                 hints: updatedChallenge.hints,
                 completion: updatedChallenge.completion,
                 commentsCount: newCount,
-                nextHintDate: updatedChallenge.nextHintDate
+                nextHintDate: updatedChallenge.nextHintDate,
+                confirmationId: updatedChallenge.confirmationId
             )
             applyFilters()
             print("✅ Updated comment count for challenge \(challengeId): \(newCount)")

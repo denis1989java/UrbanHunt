@@ -157,7 +157,7 @@ class APIService {
         return try decoder.decode([AppLocale].self, from: data)
     }
 
-    func createChallenge(title: String, country: String, cityName: String, prizePhotoUrl: String? = nil) async throws -> Challenge {
+    func createChallenge(title: String, country: String, cityName: String, location: String? = nil, prizePhotoUrl: String? = nil) async throws -> Challenge {
         print("🔄 APIService.createChallenge called")
 
         guard let token = try await getFirebaseToken() else {
@@ -176,6 +176,10 @@ class APIService {
             "country": country,
             "cityName": cityName
         ]
+
+        if let location = location {
+            body["location"] = location
+        }
 
         if let prizePhotoUrl = prizePhotoUrl {
             body["prizePhotoUrl"] = prizePhotoUrl
@@ -454,7 +458,43 @@ class APIService {
         return (challenge, nil)
     }
 
-    func updateChallenge(challengeId: String, title: String, country: String, cityName: String, prizePhotoUrl: String?) async throws -> Challenge {
+    func completeChallenge(challengeId: String, completion: Completion) async throws -> Challenge {
+        print("🔄 APIService.completeChallenge called")
+
+        guard let token = try await getFirebaseToken() else {
+            print("❌ No Firebase token")
+            throw APIError.noToken
+        }
+
+        let url = URL(string: "\(baseURL)/challenges/\(challengeId)/complete")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        request.httpBody = try encoder.encode(completion)
+
+        print("🌐 Making request to: \(url)")
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("❌ Invalid response type")
+            throw APIError.invalidResponse
+        }
+
+        print("📥 Response status: \(httpResponse.statusCode)")
+
+        guard httpResponse.statusCode == 200 else {
+            print("❌ Bad status code: \(httpResponse.statusCode)")
+            throw APIError.invalidResponse
+        }
+
+        return try JSONDecoder.apiDecoder.decode(Challenge.self, from: data)
+    }
+
+    func updateChallenge(challengeId: String, title: String, country: String, cityName: String, location: String?, prizePhotoUrl: String?) async throws -> Challenge {
         print("🔄 APIService.updateChallenge called")
 
         guard let token = try await getFirebaseToken() else {
@@ -473,6 +513,10 @@ class APIService {
             "country": country,
             "cityName": cityName
         ]
+
+        if let location = location {
+            body["location"] = location
+        }
 
         if let prizePhotoUrl = prizePhotoUrl {
             body["prizePhotoUrl"] = prizePhotoUrl

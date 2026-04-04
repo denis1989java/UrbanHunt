@@ -23,12 +23,8 @@ struct UserProfileView: View {
                 if isLoading {
                     ProgressView()
                 } else if let errorMessage = errorMessage {
-                    VStack(spacing: 16) {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                        Button("Retry") {
-                            loadUserInfo()
-                        }
+                    ErrorView(message: errorMessage) {
+                        loadUserInfo()
                     }
                 } else if let user = userInfo {
                     ScrollView {
@@ -117,12 +113,21 @@ struct UserProfileView: View {
                 .foregroundColor(.gray)
 
             Link(destination: URL(string: url) ?? URL(string: "https://")!) {
-                HStack {
-                    Text(url)
+                HStack(spacing: 8) {
+                    // Platform icon
+                    if let icon = SocialMediaHelper.platformIcon(for: url) {
+                        Image(systemName: icon)
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                    }
+
+                    // Beautiful display text
+                    Text(SocialMediaHelper.beautifyURL(url))
                         .foregroundColor(.blue)
                         .lineLimit(1)
-                        .truncationMode(.middle)
+
                     Spacer()
+
                     Image(systemName: "arrow.up.right")
                         .font(.caption)
                         .foregroundColor(.blue)

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -43,6 +44,7 @@ public class ChallengeController {
                 .country(request.getCountry())
                 .cityName(request.getCityName())
                 .createdBy(principal.getUid()) // Set creator userId instead of email
+                .location(request.getLocation()) // Set private location note
                 .prizePhotoUrl(request.getPrizePhotoUrl()) // Set prize photo
                 .createdAt(new Date())
                 .commentsCount(0L)
@@ -50,7 +52,10 @@ public class ChallengeController {
 
         Challenge created = challengeService.createChallenge(challenge);
 
-        // Convert to DTO with nextHintDate
+        // Create prize confirmation immediately upon challenge creation
+        PrizeConfirmation confirmation = prizeConfirmationService.createConfirmation(created.getId());
+
+        // Convert to DTO with nextHintDate and confirmationId
         ChallengeDto dto = ChallengeDto.builder()
                 .id(created.getId())
                 .title(created.getTitle())
@@ -61,12 +66,14 @@ public class ChallengeController {
                 .creator(created.getCreatedBy() != null
                     ? challengeService.getCreatorInfo(created.getCreatedBy())
                     : null)
+                .location(created.getLocation()) // Always include for creator
                 .prizePhotoUrl(created.getPrizePhotoUrl())
                 .createdAt(created.getCreatedAt())
                 .hints(challengeService.getPublishedHints(created))
                 .completion(created.getCompletion())
                 .commentsCount(created.getCommentsCount())
                 .nextHintDate(challengeService.getNextHintDate(created))
+                .confirmationId(confirmation.getId()) // Include confirmationId
                 .build();
 
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
@@ -79,6 +86,18 @@ public class ChallengeController {
             return ResponseEntity.notFound().build();
         }
 
+        UserPrincipal principal = SecurityUtils.getCurrentUser();
+        boolean isCreator = principal != null && principal.getUid().equals(challenge.getCreatedBy());
+
+        // Get confirmation ID if user is creator
+        String confirmationId = null;
+        if (isCreator) {
+            PrizeConfirmation confirmation = prizeConfirmationService.getConfirmationByChallengeId(challenge.getId());
+            if (confirmation != null) {
+                confirmationId = confirmation.getId();
+            }
+        }
+
         ChallengeDto dto = ChallengeDto.builder()
                 .id(challenge.getId())
                 .title(challenge.getTitle())
@@ -89,12 +108,14 @@ public class ChallengeController {
                 .creator(challenge.getCreatedBy() != null
                     ? challengeService.getCreatorInfo(challenge.getCreatedBy())
                     : null)
+                .location(isCreator ? challenge.getLocation() : null) // Only for creator
                 .prizePhotoUrl(challenge.getPrizePhotoUrl())
                 .createdAt(challenge.getCreatedAt())
                 .hints(challengeService.getPublishedHints(challenge))
                 .completion(challenge.getCompletion())
                 .commentsCount(challenge.getCommentsCount())
                 .nextHintDate(challengeService.getNextHintDate(challenge))
+                .confirmationId(confirmationId) // Include confirmationId for creator
                 .build();
         return ResponseEntity.ok(dto);
     }
@@ -131,6 +152,15 @@ public class ChallengeController {
 
         return challenges.stream()
                 .map(challenge -> {
+                    // Get confirmation ID for completed challenges
+                    String confirmationId = null;
+                    if (challenge.getStatus() == ChallengeStatus.COMPLETED) {
+                        PrizeConfirmation confirmation = prizeConfirmationService.getConfirmationByChallengeId(challenge.getId());
+                        if (confirmation != null) {
+                            confirmationId = confirmation.getId();
+                        }
+                    }
+
                     var builder = ChallengeDto.builder()
                             .id(challenge.getId())
                             .title(challenge.getTitle())
@@ -143,7 +173,8 @@ public class ChallengeController {
                             .hints(challengeService.getPublishedHints(challenge))
                             .completion(challenge.getCompletion())
                             .commentsCount(challenge.getCommentsCount())
-                            .nextHintDate(challengeService.getNextHintDate(challenge));
+                            .nextHintDate(challengeService.getNextHintDate(challenge))
+                            .confirmationId(confirmationId); // Include confirmationId for completed challenges
 
                     // Add creator info if available
                     if (challenge.getCreatedBy() != null) {
@@ -186,6 +217,19 @@ public class ChallengeController {
             return ResponseEntity.notFound().build();
         }
 
+        // Validate: cannot activate challenge without hints
+        if (status == ChallengeStatus.ACTIVE &&
+            (oldChallenge.getHints() == null || oldChallenge.getHints().isEmpty())) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "Cannot activate challenge without hints. Please add at least one hint."));
+        }
+
+        // Validate: cannot deactivate or update challenge to remove all hints if currently active
+        if (oldChallenge.getStatus() == ChallengeStatus.ACTIVE &&
+            status != ChallengeStatus.ACTIVE) {
+            // Allow status change, this validation is only for hint deletion
+        }
+
         ChallengeStatus oldStatus = oldChallenge.getStatus();
         Challenge challenge = challengeService.updateChallengeStatus(id, status);
 
@@ -204,7 +248,7 @@ public class ChallengeController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ChallengeDto> updateChallenge(
+    public ResponseEntity<?> updateChallenge(
             @PathVariable String id,
             @Valid @RequestBody UpdateChallengeRequest request) {
         UserPrincipal principal = SecurityUtils.getCurrentUser();
@@ -212,38 +256,44 @@ public class ChallengeController {
             return ResponseEntity.status(401).build();
         }
 
-        Challenge challenge = challengeService.updateChallenge(
-                id,
-                request.getTitle(),
-                request.getCountry(),
-                request.getCityName(),
-                request.getPrizePhotoUrl()
-        );
+        try {
+            Challenge challenge = challengeService.updateChallenge(
+                    id,
+                    request.getTitle(),
+                    request.getCountry(),
+                    request.getCityName(),
+                    request.getLocation(),
+                    request.getPrizePhotoUrl()
+            );
 
-        if (challenge == null) {
-            return ResponseEntity.notFound().build();
+            if (challenge == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Convert to DTO
+            ChallengeDto dto = ChallengeDto.builder()
+                    .id(challenge.getId())
+                    .title(challenge.getTitle())
+                    .status(challenge.getStatus())
+                    .country(challenge.getCountry())
+                    .cityName(challenge.getCityName())
+                    .createdBy(challenge.getCreatedBy())
+                    .creator(challenge.getCreatedBy() != null
+                        ? challengeService.getCreatorInfo(challenge.getCreatedBy())
+                        : null)
+                    .location(challenge.getLocation()) // Include location for creator
+                    .prizePhotoUrl(challenge.getPrizePhotoUrl())
+                    .createdAt(challenge.getCreatedAt())
+                    .hints(challengeService.getPublishedHints(challenge))
+                    .completion(challenge.getCompletion())
+                    .commentsCount(challenge.getCommentsCount())
+                    .nextHintDate(challengeService.getNextHintDate(challenge))
+                    .build();
+
+            return ResponseEntity.ok(dto);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
-
-        // Convert to DTO
-        ChallengeDto dto = ChallengeDto.builder()
-                .id(challenge.getId())
-                .title(challenge.getTitle())
-                .status(challenge.getStatus())
-                .country(challenge.getCountry())
-                .cityName(challenge.getCityName())
-                .createdBy(challenge.getCreatedBy())
-                .creator(challenge.getCreatedBy() != null
-                    ? challengeService.getCreatorInfo(challenge.getCreatedBy())
-                    : null)
-                .prizePhotoUrl(challenge.getPrizePhotoUrl())
-                .createdAt(challenge.getCreatedAt())
-                .hints(challengeService.getPublishedHints(challenge))
-                .completion(challenge.getCompletion())
-                .commentsCount(challenge.getCommentsCount())
-                .nextHintDate(challengeService.getNextHintDate(challenge))
-                .build();
-
-        return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping("/{id}")
@@ -276,6 +326,10 @@ public class ChallengeController {
 
         return challenges.stream()
                 .map(challenge -> {
+                    // Get confirmation ID for creator's own challenges
+                    PrizeConfirmation confirmation = prizeConfirmationService.getConfirmationByChallengeId(challenge.getId());
+                    String confirmationId = confirmation != null ? confirmation.getId() : null;
+
                     var builder = ChallengeDto.builder()
                             .id(challenge.getId())
                             .title(challenge.getTitle())
@@ -283,12 +337,14 @@ public class ChallengeController {
                             .country(challenge.getCountry())
                             .cityName(challenge.getCityName())
                             .createdBy(challenge.getCreatedBy())
+                            .location(challenge.getLocation()) // Always include for creator's own challenges
                             .prizePhotoUrl(challenge.getPrizePhotoUrl())
                             .createdAt(challenge.getCreatedAt())
                             .hints(challengeService.getPublishedHints(challenge))
                             .completion(challenge.getCompletion())
                             .commentsCount(challenge.getCommentsCount())
-                            .nextHintDate(challengeService.getNextHintDate(challenge));
+                            .nextHintDate(challengeService.getNextHintDate(challenge))
+                            .confirmationId(confirmationId); // Include confirmationId for creator
 
                     if (challenge.getCreatedBy() != null) {
                         builder.creator(challengeService.getCreatorInfo(challenge.getCreatedBy()));

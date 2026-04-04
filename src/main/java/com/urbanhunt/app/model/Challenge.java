@@ -30,6 +30,8 @@ public class Challenge {
 
     private String createdBy; // Email of user who created the challenge
 
+    private String location; // Private note for creator to identify challenge
+
     private String prizePhotoUrl; // Optional photo of the prize
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")

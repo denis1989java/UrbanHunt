@@ -15,12 +15,14 @@ struct Challenge: Identifiable, Codable {
     let cityName: String
     let createdBy: String?
     let creator: UserSummary?
+    let location: String? // Private note for creator only
     let prizePhotoUrl: String?
     let createdAt: Date
     let hints: [Hint]?
     let completion: Completion?
     var commentsCount: Int?
     let nextHintDate: Date?
+    let confirmationId: String? // Prize confirmation ID for QR code
 
     enum ChallengeStatus: String, Codable {
         case draft = "DRAFT"
@@ -45,7 +47,7 @@ struct Hint: Codable {
 
 struct Completion: Codable {
     let userId: String
-    let userName: String
+    let userName: String?
     let completedAt: Date
-    let proofPhotoUrl: String?
+    let qrCodeScanned: String?
 }

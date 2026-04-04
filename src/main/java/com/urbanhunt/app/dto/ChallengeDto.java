@@ -25,6 +25,7 @@ public class ChallengeDto {
     private String cityName;
     private String createdBy;
     private UserSummary creator;
+    private String location; // Only visible to creator
     private String prizePhotoUrl;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private Date createdAt;
@@ -33,5 +34,6 @@ public class ChallengeDto {
     private Long commentsCount;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private Date nextHintDate;
+    private String confirmationId; // Prize confirmation ID for QR code
 
 }

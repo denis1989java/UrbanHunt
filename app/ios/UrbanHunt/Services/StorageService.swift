@@ -73,9 +73,8 @@ class StorageService {
 
         print("📦 Image data size: \(imageData.count) bytes (\(imageData.count / 1024) KB)")
 
-        // Create unique filename for hint media
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let fileName = "hints/\(challengeId)/hint_\(hintIndex)_\(timestamp).jpg"
+        // Use fixed filename based on hint index to overwrite previous hint media
+        let fileName = "hints/\(challengeId)/hint_\(hintIndex).jpg"
         print("📁 Upload path: \(fileName)")
 
         let storageRef = storage.reference().child(fileName)
@@ -83,7 +82,8 @@ class StorageService {
 
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
-        metadata.cacheControl = "public, max-age=86400"
+        // Set cache control to allow caching but revalidate
+        metadata.cacheControl = "public, max-age=3600"
 
         print("⬆️ Uploading...")
         _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
@@ -92,8 +92,11 @@ class StorageService {
         // Get download URL
         print("🔗 Getting download URL...")
         let downloadURL = try await storageRef.downloadURL()
-        print("✅ Download URL: \(downloadURL.absoluteString)")
-        return downloadURL.absoluteString
+
+        // Add timestamp to URL to bust cache when image changes
+        let urlWithTimestamp = downloadURL.absoluteString + "&t=\(Int(Date().timeIntervalSince1970))"
+        print("✅ Download URL: \(urlWithTimestamp)")
+        return urlWithTimestamp
     }
 
     func uploadPrizePhoto(challengeId: String, image: UIImage) async throws -> String {
@@ -110,9 +113,8 @@ class StorageService {
 
         print("📦 Image data size: \(imageData.count) bytes (\(imageData.count / 1024) KB)")
 
-        // Create filename for prize photo
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let fileName = "prizes/\(challengeId)/prize_\(timestamp).jpg"
+        // Use fixed filename to overwrite previous prize photo
+        let fileName = "prizes/\(challengeId)/prize.jpg"
         print("📁 Upload path: \(fileName)")
 
         let storageRef = storage.reference().child(fileName)
@@ -120,7 +122,8 @@ class StorageService {
 
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
-        metadata.cacheControl = "public, max-age=86400"
+        // Set cache control to allow caching but revalidate
+        metadata.cacheControl = "public, max-age=3600"
 
         print("⬆️ Uploading...")
         _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
@@ -129,37 +132,46 @@ class StorageService {
         // Get download URL
         print("🔗 Getting download URL...")
         let downloadURL = try await storageRef.downloadURL()
-        print("✅ Download URL: \(downloadURL.absoluteString)")
-        return downloadURL.absoluteString
+
+        // Add timestamp to URL to bust cache when image changes
+        let urlWithTimestamp = downloadURL.absoluteString + "&t=\(Int(Date().timeIntervalSince1970))"
+        print("✅ Download URL: \(urlWithTimestamp)")
+        return urlWithTimestamp
     }
 
     // Upload prize confirmation content (photo or video)
-    func uploadPrizeConfirmationContent(_ data: Data) async throws -> String {
+    func uploadPrizeConfirmationContent(confirmationId: String, data: Data) async throws -> String {
         print("📤 Starting prize confirmation content upload...")
 
-        // Generate unique filename
-        let filename = UUID().uuidString
+        // Detect file extension based on content type
+        var fileExtension = "jpg"
+        var contentType = "image/jpeg"
 
-        // Create storage reference
-        let storageRef = Storage.storage().reference()
-            .child("prize-confirmations")
-            .child(filename)
-
-        print("📁 Storage path: prize-confirmations/\(filename)")
-
-        let metadata = StorageMetadata()
-        // Detect content type (basic detection)
         if data.count > 4 {
             let bytes = [UInt8](data.prefix(4))
             if bytes == [0xFF, 0xD8, 0xFF] {
-                metadata.contentType = "image/jpeg"
+                fileExtension = "jpg"
+                contentType = "image/jpeg"
             } else if bytes.starts(with: [0x89, 0x50, 0x4E, 0x47]) {
-                metadata.contentType = "image/png"
+                fileExtension = "png"
+                contentType = "image/png"
             } else {
-                metadata.contentType = "video/mp4" // Default for video
+                fileExtension = "mp4"
+                contentType = "video/mp4"
             }
         }
-        metadata.cacheControl = "public, max-age=86400"
+
+        // Use fixed filename based on confirmationId to overwrite previous content
+        let fileName = "prize-confirmations/\(confirmationId)/content.\(fileExtension)"
+        print("📁 Upload path: \(fileName)")
+
+        let storageRef = storage.reference().child(fileName)
+        print("🔗 Storage ref: \(storageRef.fullPath)")
+
+        let metadata = StorageMetadata()
+        metadata.contentType = contentType
+        // Set cache control to allow caching but revalidate
+        metadata.cacheControl = "public, max-age=3600"
 
         print("⬆️ Uploading...")
         _ = try await storageRef.putDataAsync(data, metadata: metadata)
@@ -168,8 +180,11 @@ class StorageService {
         // Get download URL
         print("🔗 Getting download URL...")
         let downloadURL = try await storageRef.downloadURL()
-        print("✅ Download URL: \(downloadURL.absoluteString)")
-        return downloadURL.absoluteString
+
+        // Add timestamp to URL to bust cache when content changes
+        let urlWithTimestamp = downloadURL.absoluteString + "&t=\(Int(Date().timeIntervalSince1970))"
+        print("✅ Download URL: \(urlWithTimestamp)")
+        return urlWithTimestamp
     }
 }
 

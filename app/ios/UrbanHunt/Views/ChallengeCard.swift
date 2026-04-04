@@ -15,6 +15,7 @@ struct ChallengeCard: View {
     @State private var showComments = false
     @State private var showUserProfile = false
     @State private var showShareSheet = false
+    @State private var showWinnerConfirmation = false
 
     var body: some View {
         cardContent
@@ -39,6 +40,11 @@ struct ChallengeCard: View {
                 ShareSheetView(
                     activityItems: [shareMessage]
                 )
+            }
+            .sheet(isPresented: $showWinnerConfirmation) {
+                if let confirmationId = challenge.confirmationId {
+                    WinnerConfirmationView(confirmationId: confirmationId)
+                }
             }
     }
 
@@ -198,48 +204,70 @@ struct ChallengeCard: View {
             Divider()
 
             // Action buttons
-            HStack(spacing: 0) {
-                // Hints button
-                Button(action: {
-                    showHints = true
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "lightbulb")
-                            .font(.subheadline)
-                        Text("hints".localized)
-                            .font(.subheadline)
-                        if let hints = challenge.hints, !hints.isEmpty {
-                            Text("(\(hints.count))")
+            VStack(spacing: 0) {
+                // First row: Hints and Comments
+                HStack(alignment: .center, spacing: 0) {
+                    // Hints button
+                    Button(action: {
+                        showHints = true
+                    }) {
+                        HStack(alignment: .center, spacing: 6) {
+                            Image(systemName: "lightbulb")
+                                .font(.subheadline)
+                            Text("hints".localized)
                                 .font(.caption)
-                                .foregroundColor(.gray)
+                            if let hints = challenge.hints, !hints.isEmpty {
+                                Text("(\(hints.count))")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                            }
                         }
+                        .foregroundColor(.primary)
                     }
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .buttonStyle(PlainButtonStyle())
+                    .frame(maxWidth: .infinity, maxHeight: 40)
+
+                    Divider()
+
+                    // Comments button
+                    Button(action: {
+                        showComments = true
+                    }) {
+                        HStack(alignment: .center, spacing: 6) {
+                            Image(systemName: "bubble.left")
+                                .font(.subheadline)
+                            Text("comments".localized)
+                                .font(.caption)
+                            if let count = challenge.commentsCount, count > 0 {
+                                Text("(\(count))")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .foregroundColor(.primary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .frame(maxWidth: .infinity, maxHeight: 40)
                 }
 
-                Divider()
-                    .frame(height: 20)
+                // Second row: Confirmation button (only for completed challenges)
+                if challenge.status == .completed, let confirmationId = challenge.confirmationId, !confirmationId.isEmpty {
+                    Divider()
+                        .padding(.vertical, 12)
 
-                // Comments button
-                Button(action: {
-                    showComments = true
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "bubble.left")
-                            .font(.subheadline)
-                        Text("comments".localized)
-                            .font(.subheadline)
-                        if let count = challenge.commentsCount, count > 0 {
-                            Text("(\(count))")
+                    Button(action: {
+                        showWinnerConfirmation = true
+                    }) {
+                        HStack(alignment: .center, spacing: 6) {
+                            Image(systemName: "checkmark.seal")
+                                .font(.subheadline)
+                            Text("confirmation".localized)
                                 .font(.caption)
-                                .foregroundColor(.gray)
                         }
+                        .foregroundColor(.primary)
                     }
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .buttonStyle(PlainButtonStyle())
+                    .frame(maxWidth: .infinity, maxHeight: 40)
                 }
             }
         }

@@ -23,6 +23,9 @@
 "select_city" = "Select city";
 "challenge_name" = "Challenge name";
 "enter_challenge_title" = "Enter challenge title";
+"location" = "Location";
+"enter_location" = "Enter location details";
+"location_note" = "Private note - only visible to you. Use this to identify your challenge.";
 
 /* Hints */
 "hints" = "Hints";
@@ -104,6 +107,7 @@
 "draft" = "Draft";
 "active" = "Active";
 "completed" = "Completed";
+"complete" = "Complete";
 "archived" = "Archived";
 
 /* Edit Challenge */
@@ -118,6 +122,7 @@
 "unsaved_changes" = "Unsaved Changes";
 "save_changes_before_activate" = "You have unsaved changes. Please save them before activating.";
 "save_and_activate" = "Save & Activate";
+"cannot_activate_without_hints" = "Cannot activate challenge without hints. Please add at least one hint.";
 
 /* Prize Confirmation */
 "prize_found" = "Prize Found!";
@@ -139,3 +144,12 @@
 "prize_confirmation_link" = "Prize Confirmation Link";
 "copy_link" = "Copy Link";
 "share_this_link_message" = "Share this link to confirm prize finding";
+"qr_code_title" = "QR Code for Prize";
+"qr_code_instructions" = "Print this QR code and hide it with the prize. When someone finds it, they can scan it to mark the challenge as completed.";
+"qr_code_share_message" = "Congratulations on winning the challenge! Please scan the QR code and mark it as completed. Leave your comment and attach a photo or video. We really appreciate your reactions! Thank you!";
+"share_qr" = "Share QR Code";
+"view_qr_code" = "View QR Code";
+"confirmation" = "Confirmation";
+"winner_confirmation" = "Winner's Confirmation";
+"no_winner_reaction" = "Unfortunately, the winner did not leave any reaction :(";
+"winner_message" = "Winner's Message";
